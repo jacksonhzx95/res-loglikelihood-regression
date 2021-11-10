@@ -110,7 +110,7 @@ def get_dir(src_point, rot_rad):
     src_result[0] = src_point[0] * cs - src_point[1] * sn
     src_result[1] = src_point[0] * sn + src_point[1] * cs
 
-    return src_result
+    return np.array(src_result)
 
 
 def count_visible(bbox, joints_3d):

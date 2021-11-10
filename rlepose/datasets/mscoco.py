@@ -1,11 +1,8 @@
 """MS COCO Human keypoint dataset."""
 import os
-
 import numpy as np
-
 from rlepose.models.builder import DATASET
 from rlepose.utils.bbox import bbox_clip_xyxy, bbox_xywh_to_xyxy
-
 from .custom import CustomDataset
 
 

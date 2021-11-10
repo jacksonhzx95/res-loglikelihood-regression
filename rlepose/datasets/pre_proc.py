@@ -71,9 +71,12 @@ def generate_ground_truth(image,
     hm = np.zeros((1, image_h, image_w), dtype=np.float32)
     wh = np.zeros((17, 2 * 4), dtype=np.float32)
     reg = np.zeros((17, 2), dtype=np.float32)
-    ind = np.zeros((17), dtype=np.int64)
-    reg_mask = np.zeros((17), dtype=np.uint8)
-
+    ind = np.zeros(17, dtype=np.int64)
+    reg_mask = np.zeros(17, dtype=np.uint8)
+    # map(float, a[0].split("*"))
+    # for i in range(len(pts_2[:, 0])):
+    #     print(pts_2[i, 0])
+    # print(pts_2[:, 0].sum())
     if pts_2[:, 0].max() > image_w:
         print('w is big', pts_2[:, 0].max())
     if pts_2[:, 1].max() > image_h:

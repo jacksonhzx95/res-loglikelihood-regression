@@ -2,7 +2,6 @@ import argparse
 import logging
 import os
 from types import MethodType
-
 import torch
 
 from .utils.config import update_config

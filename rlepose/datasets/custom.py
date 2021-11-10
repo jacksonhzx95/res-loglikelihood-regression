@@ -7,7 +7,7 @@ from abc import abstractmethod, abstractproperty
 import cv2
 import torch.utils.data as data
 from rlepose.utils.presets import SimpleTransform
-from pycocotools.coco import COCO
+# from pycocotools.coco import COCO
 
 
 class CustomDataset(data.Dataset):
@@ -98,17 +98,17 @@ class CustomDataset(data.Dataset):
     def __len__(self):
         return len(self._items)
 
-    def _lazy_load_ann_file(self):
-        if os.path.exists(self._ann_file + '.pkl') and self._lazy_import:
-            print('Lazy load json...')
-            with open(self._ann_file + '.pkl', 'rb') as fid:
-                return pk.load(fid)
-        else:
-            _database = COCO(self._ann_file)
-            if os.access(self._ann_file + '.pkl', os.W_OK):
-                with open(self._ann_file + '.pkl', 'wb') as fid:
-                    pk.dump(_database, fid, pk.HIGHEST_PROTOCOL)
-            return _database
+    # def _lazy_load_ann_file(self):
+    #     if os.path.exists(self._ann_file + '.pkl') and self._lazy_import:
+    #         print('Lazy load json...')
+    #         with open(self._ann_file + '.pkl', 'rb') as fid:
+    #             return pk.load(fid)
+    #     else:
+    #         _database = COCO(self._ann_file)
+    #         if os.access(self._ann_file + '.pkl', os.W_OK):
+    #             with open(self._ann_file + '.pkl', 'wb') as fid:
+    #                 pk.dump(_database, fid, pk.HIGHEST_PROTOCOL)
+    #         return _database
 
     def _lazy_load_json(self):
         if os.path.exists(self._ann_file + '_annot_keypoint.pkl') and self._lazy_import:

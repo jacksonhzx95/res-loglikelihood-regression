@@ -111,9 +111,9 @@ class Scoliosis_X_ray(data.Dataset):
                  **cfg):
         self._cfg = cfg
         cfg = cfg['cfg']
-        self._root = cfg['ROOT']
-        self._img_prefix = cfg['IMG_PREFIX']
-        self._ann_file = os.path.join(self._root, cfg['ANN'])
+        self._root = cfg['DATASET']['TRAIN']['ROOT']
+        self._img_prefix = cfg['DATASET']['TRAIN']['IMG_PREFIX']
+        self._ann_file = os.path.join(self._root, cfg['DATASET']['TRAIN']['ANN'])
         self._preset_cfg = cfg['DATA_PRESET']
         self._lazy_import = lazy_import
         self._skip_empty = skip_empty

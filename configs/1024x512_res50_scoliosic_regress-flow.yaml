@@ -1,0 +1,56 @@
+DATASET:
+  TRAIN:
+    TYPE: 'Scoliosis_X_ray'
+    ROOT: '/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/'
+    IMG_PREFIX: 'data/training'
+    ANN: 'labels/training'
+    AUG:
+      FLIP: true
+      ROT_FACTOR: 20
+      SCALE_FACTOR: 0.25
+      NUM_JOINTS_HALF_BODY: 0
+      PROB_HALF_BODY: 0.3
+  VAL:
+    TYPE: 'Scoliosis_X_ray'
+    ROOT: '/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/'
+    IMG_PREFIX: 'data/test'
+    ANN: 'labels/test'
+  TEST:
+    TYPE: 'Scoliosis_X_ray'
+    ROOT: '/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/'
+    IMG_PREFIX: 'data/test'
+    DET_FILE: './exp/json/test_det_rcnn.json'
+    ANN: 'labels/test'
+DATA_PRESET:
+  TYPE: 'scoliosis'
+  SIGMA: 2
+  NUM_JOINTS: 68
+  IMAGE_SIZE:
+  - 1024
+  - 512
+  HEATMAP_SIZE:
+  - 256
+  - 128
+MODEL:
+  TYPE: 'RegressFlow'
+  PRETRAINED: ''
+  TRY_LOAD: ''
+  NUM_FC_FILTERS:
+  - -1
+  HIDDEN_LIST: -1
+  NUM_LAYERS: 50
+LOSS:
+  TYPE: 'RLELoss'
+TEST:
+  HEATMAP2COORD: 'coord'
+TRAIN:
+  WORLD_SIZE: 8
+  BATCH_SIZE: 8
+  BEGIN_EPOCH: 0
+  END_EPOCH: 20000
+  OPTIMIZER: 'adam'
+  LR: 0.001
+  LR_FACTOR: 0.1
+  LR_STEP:
+  - 5000
+  - 10000
