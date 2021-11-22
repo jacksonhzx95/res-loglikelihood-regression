@@ -65,6 +65,8 @@ def mask_cross_entropy(pred, target):
     return F.binary_cross_entropy_with_logits(
         pred, target, reduction='mean')[None]
 
+# def evaluate_Scoliosis()
+
 
 def evaluate_mAP(res_file, ann_type='bbox', ann_file='person_keypoints_val2017.json', silence=True):
     """Evaluate mAP result for coco dataset.

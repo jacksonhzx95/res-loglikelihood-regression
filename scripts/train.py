@@ -2,7 +2,7 @@ import logging
 import os
 import random
 import sys
-
+sys.path.insert(0, '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression')
 import numpy as np
 import torch
 import torch.multiprocessing as mp
@@ -13,7 +13,6 @@ from rlepose.trainer import train, validate, validate_gt, validate_gt_3d
 from rlepose.utils.env import init_dist
 from rlepose.utils.metrics import NullWriter
 from rlepose.utils.transforms import get_coord
-
 num_gpu = torch.cuda.device_count()
 
 
