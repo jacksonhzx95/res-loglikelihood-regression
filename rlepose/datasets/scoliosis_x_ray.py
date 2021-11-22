@@ -1,6 +1,6 @@
 import os
 import torch.utils.data as data
-import pre_proc
+# import pre_proc
 import yaml
 from easydict import EasyDict as edict
 from rlepose.models import builder
@@ -110,11 +110,11 @@ class Scoliosis_X_ray(data.Dataset):
                  lazy_import=False,
                  **cfg):
         self._cfg = cfg
-        cfg = cfg['cfg']
+        # cfg = cfg['cfg']
         self._root = cfg['ROOT']
         self._img_prefix = cfg['IMG_PREFIX']
         self._ann_file = os.path.join(self._root, cfg['ANN'])
-        self._preset_cfg = cfg['DATA_PRESET']
+        self._preset_cfg = cfg['PRESET']
         self._lazy_import = lazy_import
         self._skip_empty = skip_empty
         self._train = train

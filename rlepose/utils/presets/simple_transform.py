@@ -421,7 +421,7 @@ class ScoliosisTransform(object):
         input_size = self._input_size
         xmin, ymin, xmax, ymax = (0, 0, input_size[0], input_size[1])
 
-        center = (input_size[0]/2, input_size[1]/2)
+        center = np.array((input_size[0]/2, input_size[1]/2))
         scale = self._aspect_ratio
 
         # half body transform
@@ -453,7 +453,6 @@ class ScoliosisTransform(object):
             # if fliped[0]:
             assert src.shape[2] == 3
             src = src[:, ::-1, :]
-
             joints = flip_joints_3d(joints, imgwidth, self._joint_pairs)
             center[0] = imgwidth - center[0] - 1
 

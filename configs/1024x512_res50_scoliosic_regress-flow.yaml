@@ -1,7 +1,7 @@
 DATASET:
   TRAIN:
     TYPE: 'Scoliosis_X_ray'
-    ROOT: '/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/'
+    ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
     IMG_PREFIX: 'data/training'
     ANN: 'labels/training'
     AUG:
@@ -12,12 +12,13 @@ DATASET:
       PROB_HALF_BODY: 0.3
   VAL:
     TYPE: 'Scoliosis_X_ray'
-    ROOT: '/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/'
+    ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
+
     IMG_PREFIX: 'data/test'
     ANN: 'labels/test'
   TEST:
     TYPE: 'Scoliosis_X_ray'
-    ROOT: '/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/'
+    ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
     IMG_PREFIX: 'data/test'
     DET_FILE: './exp/json/test_det_rcnn.json'
     ANN: 'labels/test'
@@ -26,11 +27,11 @@ DATA_PRESET:
   SIGMA: 2
   NUM_JOINTS: 68
   IMAGE_SIZE:
-  - 1024
-  - 512
-  HEATMAP_SIZE:
   - 256
   - 128
+  HEATMAP_SIZE:
+  - 64
+  - 32
 MODEL:
   TYPE: 'RegressFlow'
   PRETRAINED: ''
