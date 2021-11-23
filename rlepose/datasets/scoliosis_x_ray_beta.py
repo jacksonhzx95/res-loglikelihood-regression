@@ -139,7 +139,7 @@ class Scoliosis_X_ray(data.Dataset):
         self._check_centers = False
 
         self.num_class = len(self.CLASSES)
-        self._loss_type=None
+        self._loss_type = None
         # self._loss_type = cfg['heatmap2coord']
 
         self.upper_body_ids = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -236,8 +236,7 @@ class Scoliosis_X_ray(data.Dataset):
         target = self.transformation(img, label)
 
         img = target.pop('image')
-        bbox = target.pop('bbox')
-        return img, target, img_id, bbox
+        return img, target, img_id
 
     def __len__(self):
         return len(self.img_ids)

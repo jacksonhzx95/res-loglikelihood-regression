@@ -163,7 +163,8 @@ class SimpleTransform(object):
             xmin, ymin, xmax - xmin, ymax - ymin, self._aspect_ratio)
 
         # half body transform
-        if self._train and (np.sum(joints_vis[:, 0]) > self.num_joints_half_body and np.random.rand() < self.prob_half_body):
+        if self._train and (
+                np.sum(joints_vis[:, 0]) > self.num_joints_half_body and np.random.rand() < self.prob_half_body):
             c_half_body, s_half_body = self.half_body_transform(
                 gt_joints[:, :, 0], joints_vis
             )
@@ -206,7 +207,8 @@ class SimpleTransform(object):
 
         # generate training targets
         target_hm, target_hm_weight = self._target_generator(joints.copy(), self.num_joints)
-        target_uv, target_uv_weight, target_visible, target_visible_weight = self._integral_target_generator(joints.copy(), self.num_joints, inp_h, inp_w)
+        target_uv, target_uv_weight, target_visible, target_visible_weight = self._integral_target_generator(
+            joints.copy(), self.num_joints, inp_h, inp_w)
 
         bbox = _center_scale_to_box(center, scale)
 
@@ -328,7 +330,7 @@ class ScoliosisTransform(object):
             self.lower_body_ids = dataset.lower_body_ids
 
     def test_transform(self, src):
-        center = (self._input_size[0]/2, self._input_size[1]/2)
+        center = (self._input_size[0] / 2, self._input_size[1] / 2)
         scale = self._aspect_ratio
         scale = scale * 1.0
 
@@ -337,13 +339,13 @@ class ScoliosisTransform(object):
 
         trans = get_affine_transform(center, scale, 0, [inp_w, inp_h])
         img = cv2.warpAffine(src, trans, (int(inp_w), int(inp_h)), flags=cv2.INTER_LINEAR)
-        bbox = (0, 0, inp_w, inp_h)
+        # bbox = (0, 0, inp_w, inp_h)
         img = im_to_torch(img)
         img[0].add_(-0.406)
         img[1].add_(-0.457)
         img[2].add_(-0.480)
 
-        return img, bbox
+        return img
 
     def _target_generator(self, joints_3d, num_joints):
         target_weight = np.ones((num_joints, 1), dtype=np.float32)
@@ -408,7 +410,6 @@ class ScoliosisTransform(object):
         return target, target_weight, target_visible, target_visible_weight
 
     def __call__(self, src, label):
-        # bbox = list(label['bbox'])
         gt_joints = label['joints']
 
         imgwidth, imght = label['width'], label['height']
@@ -419,13 +420,13 @@ class ScoliosisTransform(object):
         joints_vis[:, 0] = gt_joints[:, 0, 1]
 
         input_size = self._input_size
-        xmin, ymin, xmax, ymax = (0, 0, input_size[0], input_size[1])
 
-        center = (input_size[0]/2, input_size[1]/2)
+        center = np.array((input_size[0] / 2, input_size[1] / 2))
         scale = self._aspect_ratio
 
         # half body transform
-        if self._train and (np.sum(joints_vis[:, 0]) > self.num_joints_half_body and np.random.rand() < self.prob_half_body):
+        if self._train and (
+                np.sum(joints_vis[:, 0]) > self.num_joints_half_body and np.random.rand() < self.prob_half_body):
             c_half_body, s_half_body = self.half_body_transform(
                 gt_joints[:, :, 0], joints_vis
             )
@@ -468,9 +469,9 @@ class ScoliosisTransform(object):
 
         # generate training targets
         target_hm, target_hm_weight = self._target_generator(joints.copy(), self.num_joints)
-        target_uv, target_uv_weight, target_visible, target_visible_weight = self._integral_target_generator(joints.copy(), self.num_joints, inp_h, inp_w)
+        target_uv, target_uv_weight, target_visible, target_visible_weight = self._integral_target_generator(
+            joints.copy(), self.num_joints, inp_h, inp_w)
 
-        bbox = [xmin, ymin, xmax, ymax]
 
         img = im_to_torch(img)
         img[0].add_(-0.406)
@@ -484,7 +485,6 @@ class ScoliosisTransform(object):
             'target_hm_weight': torch.from_numpy(target_hm_weight).float(),
             'target_uv': torch.from_numpy(target_uv).float(),
             'target_uv_weight': torch.from_numpy(target_uv_weight).float(),
-            'bbox': torch.Tensor(bbox),
         }
 
         return output
