@@ -64,7 +64,6 @@ def scoliosis_pts_process(pts):
     return joints_3d
 
 
-
 @DATASET.register_module
 class Scoliosis_X_ray(data.Dataset):
     CLASSES = ['spine']
@@ -139,7 +138,7 @@ class Scoliosis_X_ray(data.Dataset):
         self._check_centers = False
 
         self.num_class = len(self.CLASSES)
-        self._loss_type=None
+        self._loss_type = None
         # self._loss_type = cfg['heatmap2coord']
 
         self.upper_body_ids = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
@@ -236,15 +235,13 @@ class Scoliosis_X_ray(data.Dataset):
         target = self.transformation(img, label)
 
         img = target.pop('image')
-        bbox = target.pop('bbox')
-        return img, target, img_id, bbox
+        return img, target, img_id
 
     def __len__(self):
         return len(self.img_ids)
 
 
 if __name__ == '__main__':
-
     print('start')
     '''dataset = Scoliosis_X_ray(
         data_dir='/Users/huangzixun/Documents/datasets/scoliosis_keypoint(public)/boostnet_labeldata/',
@@ -253,7 +250,7 @@ if __name__ == '__main__':
         input_w=512)'''
 
     cfg_file_name = '/Users/huangzixun/Documents/python_code/res-loglikelihood-regression/configs' \
-          '/1024x512_res50_scoliosic_regress-flow.yaml'
+                    '/1024x512_res50_scoliosic_regress-flow.yaml'
     cfg = update_config(cfg_file_name)
     # print(cfg)
     train_dataset = Scoliosis_X_ray(train=True,

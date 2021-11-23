@@ -124,6 +124,7 @@ class RegressFlow(nn.Module):
 
         # (B, N, 2)
         pred_jts = out_coord.reshape(BATCH_SIZE, self.num_joints, 2)
+
         sigma = out_sigma.reshape(BATCH_SIZE, self.num_joints, -1).sigmoid()
         scores = 1 - sigma
 
@@ -134,7 +135,6 @@ class RegressFlow(nn.Module):
             bar_mu = (pred_jts - gt_uv) / sigma
             # (B, K, 2)
             log_phi = self.flow.log_prob(bar_mu.reshape(-1, 2)).reshape(BATCH_SIZE, self.num_joints, 1)
-
             nf_loss = torch.log(sigma) - log_phi
         else:
             nf_loss = None
