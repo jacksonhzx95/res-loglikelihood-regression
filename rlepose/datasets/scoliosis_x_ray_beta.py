@@ -250,7 +250,7 @@ if __name__ == '__main__':
         input_w=512)'''
 
     cfg_file_name = '/Users/huangzixun/Documents/python_code/res-loglikelihood-regression/configs' \
-                    '/1024x512_res50_scoliosic_regress-flow.yaml'
+                    '/1024x512_res50_scoliosic_regress-flow_for_mac.yaml'
     cfg = update_config(cfg_file_name)
     # print(cfg)
     train_dataset = Scoliosis_X_ray(train=True,

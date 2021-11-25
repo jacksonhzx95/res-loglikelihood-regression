@@ -421,9 +421,10 @@ class ScoliosisTransform(object):
 
         input_size = self._input_size
 
-        center = np.array((input_size[1] / 2, input_size[0] / 2))
-        scale = self._aspect_ratio
-
+        # center = np.array((input_size[1] / 2, input_size[0] / 2))
+        # scale = self._aspect_ratio
+        center, scale = _box_to_center_scale(
+            0, 0, imgwidth, imght, self._aspect_ratio)
         # half body transform
         if self._train and (
                 np.sum(joints_vis[:, 0]) > self.num_joints_half_body and np.random.rand() < self.prob_half_body):
