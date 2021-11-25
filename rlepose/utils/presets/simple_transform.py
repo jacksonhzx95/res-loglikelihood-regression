@@ -421,7 +421,7 @@ class ScoliosisTransform(object):
 
         input_size = self._input_size
 
-        center = np.array((input_size[0] / 2, input_size[1] / 2))
+        center = np.array((input_size[1] / 2, input_size[0] / 2))
         scale = self._aspect_ratio
 
         # half body transform
@@ -462,7 +462,7 @@ class ScoliosisTransform(object):
         trans = get_affine_transform(center, scale, r, [inp_w, inp_h])
         img = cv2.warpAffine(src, trans, (int(inp_w), int(inp_h)), flags=cv2.INTER_LINEAR)
 
-        # deal with joints visibility
+        # deal with joints visibility this part contains problem
         for i in range(self.num_joints):
             if joints[i, 0, 1] > 0.0:
                 joints[i, 0:2, 0] = affine_transform(joints[i, 0:2, 0], trans)

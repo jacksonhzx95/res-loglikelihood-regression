@@ -394,7 +394,7 @@ def get_affine_transform(center,
     if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
         scale = np.array([scale, scale])
 
-    scale_tmp = scale
+    scale_tmp = scale*200
     src_w = scale_tmp[0]
     dst_w = output_size[0]
     dst_h = output_size[1]
