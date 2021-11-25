@@ -73,7 +73,8 @@ def torch_to_im(img):
 
 def load_image(img_path):
     # H x W x C => C x H x W
-    return im_to_torch(cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB))  # scipy.misc.imread(img_path, mode='RGB'))
+    return im_to_torch(
+        cv2.cvtColor(cv2.imread(img_path), cv2.COLOR_BGR2RGB))  # scipy.misc.imread(img_path, mode='RGB'))
 
 
 def to_numpy(tensor):
@@ -140,7 +141,8 @@ def flip_output(output, joint_pairs, width_dim, shift=False):
         flipped_hm = flip_heatmap(output.heatmap, joint_pairs, shift)
         output.heatmap = flipped_hm
     if 'pred_jts' in output.keys():
-        flipped_jts, flipped_maxvals = flip_coord((output.pred_jts, output.maxvals), joint_pairs, width_dim, shift, flatten=False)
+        flipped_jts, flipped_maxvals = flip_coord((output.pred_jts, output.maxvals), joint_pairs, width_dim, shift,
+                                                  flatten=False)
         output.pred_jts = flipped_jts
         output.maxvals = flipped_maxvals
     return output
@@ -295,6 +297,41 @@ def heatmap_to_coord_simple(hms, bbox, **kwargs):
     return preds[None, :, :], maxvals[None, :, :]
 
 
+def heatmap_to_coord_scoliosis(pred_jts, pred_scores, hm_shape, output_3d=False):
+    hm_height, hm_width = hm_shape
+    hm_height = hm_height * 4
+    hm_width = hm_width * 4
+
+    ndims = pred_jts.dim()
+    assert ndims in [2, 3], "Dimensions of input heatmap should be 2 or 3"
+    if ndims == 2:
+        pred_jts = pred_jts.unsqueeze(0)
+        pred_scores = pred_scores.unsqueeze(0)
+
+    coords = pred_jts.cpu().numpy()
+    coords = coords.astype(float)
+    pred_scores = pred_scores.cpu().numpy()
+    pred_scores = pred_scores.astype(float)
+
+    coords[:, :, 0] = (coords[:, :, 0] + 0.5) * hm_width
+    coords[:, :, 1] = (coords[:, :, 1] + 0.5) * hm_height
+
+    preds = np.zeros_like(coords)
+    w = hm_width
+    h = hm_height
+    center = np.array([w * 0.5, h * 0.5])
+    scale = np.array([w, h])
+    # Transform back
+    for i in range(coords.shape[0]):
+        for j in range(coords.shape[1]):
+            preds[i, j, 0:2] = transform_preds(coords[i, j, 0:2], center, scale,
+                                               [hm_width, hm_height])
+            if output_3d:
+                preds[i, j, 2] = coords[i, j, 2]
+
+    return preds, pred_scores
+
+
 def heatmap_to_coord(pred_jts, pred_scores, hm_shape, bbox, output_3d=False):
     hm_height, hm_width = hm_shape
     hm_height = hm_height * 4
@@ -431,7 +468,8 @@ def get_warpmatrix(theta, size_input, size_dst, size_target, pixel_std):
     scale_y = size_target[1] / size_dst[1]
     matrix[0, 0] = math.cos(theta) * scale_x
     matrix[0, 1] = math.sin(theta) * scale_y
-    matrix[0, 2] = -0.5 * size_target[0] * math.cos(theta) - 0.5 * size_target[1] * math.sin(theta) + 0.5 * size_input[0]
+    matrix[0, 2] = -0.5 * size_target[0] * math.cos(theta) - 0.5 * size_target[1] * math.sin(theta) + 0.5 * size_input[
+        0]
     matrix[1, 0] = -math.sin(theta) * scale_x
     matrix[1, 1] = math.cos(theta) * scale_y
     matrix[1, 2] = 0.5 * size_target[0] * math.sin(theta) - 0.5 * size_target[1] * math.cos(theta) + 0.5 * size_input[1]
@@ -454,10 +492,12 @@ def get_warpmatrix_inverse(theta, size_input, size_dst, size_target):
     scale_y = size_dst[1] / size_target[1]
     matrix[0, 0] = math.cos(theta) * scale_x
     matrix[0, 1] = -math.sin(theta) * scale_x
-    matrix[0, 2] = scale_x * (-0.5 * size_input[0] * math.cos(theta) + 0.5 * size_input[1] * math.sin(theta) + 0.5 * size_target[0])
+    matrix[0, 2] = scale_x * (
+                -0.5 * size_input[0] * math.cos(theta) + 0.5 * size_input[1] * math.sin(theta) + 0.5 * size_target[0])
     matrix[1, 0] = math.sin(theta) * scale_y
     matrix[1, 1] = math.cos(theta) * scale_y
-    matrix[1, 2] = scale_y * (-0.5 * size_input[0] * math.sin(theta) - 0.5 * size_input[1] * math.cos(theta) + 0.5 * size_target[1])
+    matrix[1, 2] = scale_y * (
+                -0.5 * size_input[0] * math.sin(theta) - 0.5 * size_input[1] * math.cos(theta) + 0.5 * size_target[1])
     return matrix
 
 
@@ -475,7 +515,24 @@ def get_func_heatmap_to_coord(cfg):
     else:
         raise NotImplementedError
 
+class get_coord_scoliosis(object):
+    def __init__(self, cfg, norm_size, output_3d=False):
+        self.type = cfg.TEST.get('HEATMAP2COORD')
+        self.input_size = cfg.DATA_PRESET.IMAGE_SIZE
+        self.norm_size = norm_size
+        self.output_3d = output_3d
 
+    def __call__(self, output, idx):
+        if self.type == 'coord':
+            pred_jts = output.pred_jts[idx]
+            pred_scores = output.maxvals[idx]
+            return heatmap_to_coord_scoliosis(pred_jts, pred_scores, self.norm_size, self.output_3d)
+        elif self.type == 'heatmap':
+            pred_hms = output.heatmap[idx]
+            print('need to correct')
+            return 0
+        else:
+            raise NotImplementedError
 class get_coord(object):
     def __init__(self, cfg, norm_size, output_3d=False):
         self.type = cfg.TEST.get('HEATMAP2COORD')

@@ -5,11 +5,11 @@ DATASET:
     IMG_PREFIX: 'data/training'
     ANN: 'labels/training'
     AUG:
-      FLIP: true
+      FLIP: false
       ROT_FACTOR: 20
       SCALE_FACTOR: 0.25
       NUM_JOINTS_HALF_BODY: 0
-      PROB_HALF_BODY: 0.3
+      PROB_HALF_BODY: 0
   VAL:
     TYPE: 'Scoliosis_X_ray'
     ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
@@ -27,14 +27,14 @@ DATA_PRESET:
   SIGMA: 2
   NUM_JOINTS: 68
   IMAGE_SIZE:
+  - 1024
+  - 512
+  HEATMAP_SIZE:
   - 256
   - 128
-  HEATMAP_SIZE:
-  - 64
-  - 32
 MODEL:
   TYPE: 'RegressFlow'
-  PRETRAINED: ''
+  PRETRAINED: '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/test_rle-1024x512_res50_scoliosic_regress-flow.yaml/model_3357.pth'
   TRY_LOAD: ''
   NUM_FC_FILTERS:
   - -1
@@ -48,10 +48,10 @@ TRAIN:
   WORLD_SIZE: 8
   BATCH_SIZE: 8
   BEGIN_EPOCH: 0
-  END_EPOCH: 20000
+  END_EPOCH: 2000
   OPTIMIZER: 'adam'
-  LR: 0.001
+  LR: 0.0005
   LR_FACTOR: 0.1
   LR_STEP:
-  - 5000
-  - 10000
+  - 500
+  - 1000
