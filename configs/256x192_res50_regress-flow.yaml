@@ -49,7 +49,7 @@ TRAIN:
   BEGIN_EPOCH: 0
   END_EPOCH: 270
   OPTIMIZER: 'adam'
-  LR: 0.001
+  LR: 0.0005
   LR_FACTOR: 0.1
   LR_STEP:
   - 170

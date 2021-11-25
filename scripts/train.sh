@@ -6,7 +6,7 @@ PORT=${3:-23456}
 
 HOST=$(hostname -i)
 
-python ./scripts/train.py \
+python ./scripts/train_scoliosis.py \
     --nThreads 16 \
     --launcher pytorch --rank 0 \
     --dist-url tcp://${HOST}:${PORT} \

@@ -38,7 +38,7 @@ def train(opt, cfg, train_loader, m, criterion, optimizer):
     if opt.log:
         train_loader = tqdm(train_loader, dynamic_ncols=True)
 
-    for i, (inps, labels, _, bboxes) in enumerate(train_loader):
+    for i, (inps, labels, _) in enumerate(train_loader):
         inps = inps.cuda()
 
         for k, _ in labels.items():
@@ -170,14 +170,18 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
         gt_val_dataset, batch_size=batch_size, shuffle=False, num_workers=20, drop_last=False, sampler=gt_val_sampler)
     kpt_json = []
     m.eval()
-
+    hm_shape = cfg.DATA_PRESET.get('HEATMAP_SIZE')
+    depth_dim = cfg.MODEL.get('DEPTH_DIM')
+    output_3d = cfg.DATA_PRESET.get('OUT_3D', False)
+    hm_shape = (hm_shape[1], hm_shape[0], depth_dim)
     hm_size = cfg.DATA_PRESET.HEATMAP_SIZE
     flip_shift = cfg.TEST.get('FLIP_SHIFT', True)
-
+    acc_val_sum = 0
+    val_count = 0
     if opt.log:
         gt_val_loader = tqdm(gt_val_loader, dynamic_ncols=True)
 
-    for inps, labels, img_ids, bboxes in gt_val_loader:
+    for inps, labels, img_ids in gt_val_loader:
         inps = inps.cuda()
         output = m(inps)
 
@@ -191,17 +195,18 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
                     continue
                 if output[k] is not None:
                     output[k] = (output[k] + output_flipped[k]) / 2
-
+        acc_val = calc_coord_accuracy(output, labels, hm_shape, output_3d=output_3d)
+        acc_val_sum = acc_val
+        val_count += 1
         for i in range(inps.shape[0]):
-            bbox = bboxes[i].tolist()
+            # bbox = bboxes[i].tolist()
             pose_coords, pose_scores = heatmap_to_coord(
-                output, bbox, idx=i)
-
+                output, idx=i)
+            # acc = calc_coord_accuracy()
             keypoints = np.concatenate((pose_coords[0], pose_scores[0]), axis=1)
             keypoints = keypoints.reshape(-1).tolist()
 
             data = dict()
-            data['bbox'] = bboxes[i].tolist()
             data['image_id'] = str(img_ids[i])
             # data['image_id'] = int(img_ids[i])
             data['score'] = float(np.mean(pose_scores) + np.max(pose_scores))
@@ -212,7 +217,7 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
 
     with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{opt.rank}.pkl'), 'wb') as fid:
         pk.dump(kpt_json, fid, pk.HIGHEST_PROTOCOL)
-
+    acc_val_avg = acc_val_sum/val_count
     torch.distributed.barrier()  # Make sure all JSON files are saved
 
     if opt.rank == 0:
@@ -226,8 +231,9 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
 
         with open(os.path.join(opt.work_dir, 'test_gt_kpt.json'), 'w') as fid:
             json.dump(kpt_json_all, fid)
-        res = evaluate_mAP(os.path.join(opt.work_dir, 'test_gt_kpt.json'), ann_type='keypoints')
-        return res['AP']
+        # acc = calc_coord_accuracy()
+        # res = evaluate_mAP(os.path.join(opt.work_dir, 'test_gt_kpt.json'), ann_type='keypoints')
+        return acc_val_avg # res['AP']
     else:
         return 0
 
@@ -247,7 +253,7 @@ def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
     if opt.log:
         gt_val_loader = tqdm(gt_val_loader, dynamic_ncols=True)
 
-    for inps, labels, img_ids, bboxes in gt_val_loader:
+    for inps, labels, img_ids in gt_val_loader:
         inps = inps.cuda()
         output = m(inps)
 
@@ -262,12 +268,11 @@ def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
                     output[k] = (output[k] + output_flipped[k]) / 2
 
         for i in range(inps.shape[0]):
-            bbox = bboxes[i].tolist()
             pose_coords, pose_scores = heatmap_to_coord(
-                output, bbox, idx=i)
+                output, idx=i)
             assert pose_coords.shape[0] == 1
 
-            kpt_pred[int(img_ids[i])] = {
+            kpt_pred[str(img_ids[i])] = {
                 'uvd': pose_coords[0]
             }
 
