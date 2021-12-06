@@ -423,6 +423,7 @@ class ScoliosisTransform(object):
 
         # center = np.array((input_size[1] / 2, input_size[0] / 2))
         # scale = self._aspect_ratio
+
         center, scale = _box_to_center_scale(
             0, 0, imgwidth, imght, self._aspect_ratio)
         # half body transform
