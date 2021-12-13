@@ -17,6 +17,7 @@ def update_config(config_file):
         config = edict(yaml.load(f, Loader=yaml.FullLoader))
         return config
 
+
 def rearrange_pts(pts):
     boxes = []
     for k in range(0, len(pts), 4):
@@ -42,6 +43,7 @@ def load_gt_pts(annopath):
     pts = loadmat(annopath)['p2']  # num x 2 (x,y)
     pts = rearrange_pts(pts)
     return pts
+
 
 '''def _check_load_keypoints(self, coco, entry):
 

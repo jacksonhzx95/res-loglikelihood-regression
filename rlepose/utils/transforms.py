@@ -317,6 +317,7 @@ def heatmap_to_coord_scoliosis(pred_jts, pred_scores, hm_shape, output_3d=False)
     coords[:, :, 1] = (coords[:, :, 1] + 0.5) * hm_height
 
     preds = np.zeros_like(coords)
+    # h, w should be correct
     w = hm_width
     h = hm_height
     center = np.array([w * 0.5, h * 0.5])
@@ -493,11 +494,11 @@ def get_warpmatrix_inverse(theta, size_input, size_dst, size_target):
     matrix[0, 0] = math.cos(theta) * scale_x
     matrix[0, 1] = -math.sin(theta) * scale_x
     matrix[0, 2] = scale_x * (
-                -0.5 * size_input[0] * math.cos(theta) + 0.5 * size_input[1] * math.sin(theta) + 0.5 * size_target[0])
+            -0.5 * size_input[0] * math.cos(theta) + 0.5 * size_input[1] * math.sin(theta) + 0.5 * size_target[0])
     matrix[1, 0] = math.sin(theta) * scale_y
     matrix[1, 1] = math.cos(theta) * scale_y
     matrix[1, 2] = scale_y * (
-                -0.5 * size_input[0] * math.sin(theta) - 0.5 * size_input[1] * math.cos(theta) + 0.5 * size_target[1])
+            -0.5 * size_input[0] * math.sin(theta) - 0.5 * size_input[1] * math.cos(theta) + 0.5 * size_target[1])
     return matrix
 
 
@@ -514,6 +515,7 @@ def get_func_heatmap_to_coord(cfg):
         return heatmap_to_coord_simple
     else:
         raise NotImplementedError
+
 
 class get_coord_scoliosis(object):
     def __init__(self, cfg, norm_size, output_3d=False):
@@ -533,6 +535,8 @@ class get_coord_scoliosis(object):
             return 0
         else:
             raise NotImplementedError
+
+
 class get_coord(object):
     def __init__(self, cfg, norm_size, output_3d=False):
         self.type = cfg.TEST.get('HEATMAP2COORD')

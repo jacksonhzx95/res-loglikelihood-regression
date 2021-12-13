@@ -34,7 +34,7 @@ DATA_PRESET:
   - 128
 MODEL:
   TYPE: 'RegressFlow'
-  PRETRAINED: '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/test_rle-1024x512_res50_scoliosic_regress-flow.yaml/model_3357.pth'
+  PRETRAINED: ''
   TRY_LOAD: ''
   NUM_FC_FILTERS:
   - -1
@@ -48,10 +48,10 @@ TRAIN:
   WORLD_SIZE: 8
   BATCH_SIZE: 8
   BEGIN_EPOCH: 0
-  END_EPOCH: 2000
+  END_EPOCH: 1000
   OPTIMIZER: 'adam'
-  LR: 0.0005
+  LR: 0.002
   LR_FACTOR: 0.1
   LR_STEP:
-  - 500
-  - 1000
+  - 700
+  - 800

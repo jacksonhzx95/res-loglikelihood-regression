@@ -196,7 +196,7 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
                 if output[k] is not None:
                     output[k] = (output[k] + output_flipped[k]) / 2
         acc_val = calc_coord_accuracy(output, labels, hm_shape, output_3d=output_3d)
-        acc_val_sum = acc_val
+        acc_val_sum += acc_val
         val_count += 1
         for i in range(inps.shape[0]):
             # bbox = bboxes[i].tolist()
@@ -233,7 +233,7 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
             json.dump(kpt_json_all, fid)
         # acc = calc_coord_accuracy()
         # res = evaluate_mAP(os.path.join(opt.work_dir, 'test_gt_kpt.json'), ann_type='keypoints')
-        return acc_val_avg # res['AP']
+        return acc_val_avg  # res['AP']
     else:
         return 0
 

@@ -318,7 +318,8 @@ class ScoliosisTransform(object):
         self._loss_type = loss_type
         self._aspect_ratio = float(input_size[1]) / input_size[0]  # w / h
         self._feat_stride = np.array(input_size) / np.array(output_size)
-
+        self.imgwidth = input_size[1]
+        self.imght = input_size[0]
         self.pixel_std = 1
         self.align_coord = True
 
@@ -330,8 +331,11 @@ class ScoliosisTransform(object):
             self.lower_body_ids = dataset.lower_body_ids
 
     def test_transform(self, src):
-        center = (self._input_size[0] / 2, self._input_size[1] / 2)
-        scale = self._aspect_ratio
+        center, scale = _box_to_center_scale(
+            0, 0, self.imgwidth, self.imght, self._aspect_ratio)
+        # center = (self._input_size[0] / 2, self._input_size[1] / 2)
+        # scale = self._aspect_ratio
+
         scale = scale * 1.0
 
         input_size = self._input_size
