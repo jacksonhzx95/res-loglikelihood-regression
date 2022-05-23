@@ -52,7 +52,8 @@ def main_worker(gpu, opt, cfg):
         opt.gpu = gpu
 
     init_dist(opt)
-
+    best_mse = 70
+    best_smape = 13
     if opt.log:
         cfg_file_name = os.path.basename(opt.cfg)
         filehandler = logging.FileHandler(
@@ -78,7 +79,7 @@ def main_worker(gpu, opt, cfg):
     m = preset_model(cfg)
 
     m.cuda(opt.gpu)
-    m = torch.nn.parallel.DistributedDataParallel(m, device_ids=[opt.gpu])
+    m = torch.nn.parallel.DataParallel(m, device_ids=[opt.gpu])
 
     criterion = builder.build_loss(cfg.LOSS).cuda()
 
@@ -131,11 +132,20 @@ def main_worker(gpu, opt, cfg):
                     logger.info(f'##### Epoch {opt.epoch} | gt results: {err}/{best_err} #####')
 
                 else:
-                    val_acc = validate_gt(m, opt, cfg, heatmap_to_coord)
-                    # det_AP = validate(m, opt, cfg, heatmap_to_coord)
-                    logger.info(f'##### Epoch {opt.epoch} | acc: {val_acc} #####')
+                    val_acc, mse, mape = validate_gt(m, opt, cfg, heatmap_to_coord)
 
-        torch.distributed.barrier()  # Sync
+                    # det_AP = validate(m, opt, cfg, heatmap_to_coord)
+                    logger.info(f'##### Epoch {opt.epoch} | test acc: {val_acc} ; mse: {mse}; MAPE: {mape}#####')
+            if best_mse > mse:
+                torch.save(m.module.state_dict(),
+                           './exp/{}-{}/best_mse.pth'.format(opt.exp_id, cfg.FILE_NAME))
+                best_mse = mse
+            if best_smape > mape:
+                torch.save(m.module.state_dict(),
+                           './exp/{}-{}/best_smape.pth'.format(opt.exp_id, cfg.FILE_NAME))
+                best_smape = mape
+            logger.info(f' best mse: {best_mse}; Bset SMAPE: {best_smape}#####')
+        # torch.distributed.barrier()  # Sync
 
     torch.save(m.module.state_dict(), './exp/{}-{}/final.pth'.format(opt.exp_id, cfg.FILE_NAME))
 

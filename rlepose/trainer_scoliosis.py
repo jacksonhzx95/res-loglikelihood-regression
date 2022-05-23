@@ -6,12 +6,12 @@ import numpy as np
 import torch
 from torch.nn.utils import clip_grad
 from tqdm import tqdm
-
+from rlepose.utils import cobb_evaluate
 from rlepose.models import builder
 from rlepose.utils.metrics import DataLogger, calc_accuracy, calc_coord_accuracy, evaluate_mAP
 from rlepose.utils.nms import oks_pose_nms
 from rlepose.utils.transforms import flip, flip_output
-
+from rlepose.utils.metric_mape import cal_mape
 
 def clip_gradient(optimizer, max_norm, norm_type):
     """
@@ -91,7 +91,7 @@ def validate(m, opt, cfg, heatmap_to_coord, batch_size=20, use_nms=False):
     det_dataset_sampler = torch.utils.data.distributed.DistributedSampler(
         det_dataset, num_replicas=opt.world_size, rank=opt.rank)
     det_loader = torch.utils.data.DataLoader(
-        det_dataset, batch_size=batch_size, shuffle=False, num_workers=20, drop_last=False, sampler=det_dataset_sampler)
+        det_dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=False, sampler=det_dataset_sampler)
     kpt_json = []
 
     m.eval()
@@ -167,7 +167,7 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
         gt_val_dataset, num_replicas=opt.world_size, rank=opt.rank)
 
     gt_val_loader = torch.utils.data.DataLoader(
-        gt_val_dataset, batch_size=batch_size, shuffle=False, num_workers=20, drop_last=False, sampler=gt_val_sampler)
+        gt_val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=False, sampler=gt_val_sampler)
     kpt_json = []
     m.eval()
     hm_shape = cfg.DATA_PRESET.get('HEATMAP_SIZE')
@@ -218,24 +218,26 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
     with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{opt.rank}.pkl'), 'wb') as fid:
         pk.dump(kpt_json, fid, pk.HIGHEST_PROTOCOL)
     acc_val_avg = acc_val_sum/val_count
-    torch.distributed.barrier()  # Make sure all JSON files are saved
+    # torch.distributed.barrier()  # Make sure all JSON files are saved
 
     if opt.rank == 0:
-        kpt_json_all = []
-        for r in range(opt.world_size):
-            with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{r}.pkl'), 'rb') as fid:
-                kpt_pred = pk.load(fid)
-
-            os.remove(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{r}.pkl'))
-            kpt_json_all += kpt_pred
+        kpt_json_all = kpt_json
+        # for r in range(opt.world_size):
+        #     with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{r}.pkl'), 'rb') as fid:
+        #         kpt_pred = pk.load(fid)
+        #
+        #     os.remove(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{r}.pkl'))
+        #     kpt_json_all += kpt_pred
 
         with open(os.path.join(opt.work_dir, 'test_gt_kpt.json'), 'w') as fid:
             json.dump(kpt_json_all, fid)
         # acc = calc_coord_accuracy()
         # res = evaluate_mAP(os.path.join(opt.work_dir, 'test_gt_kpt.json'), ann_type='keypoints')
-        return acc_val_avg  # res['AP']
+        mse, mape = cal_mape(kpt_json, cfg.DATA_PRESET.get('IMAGE_SIZE'))
+
+        return acc_val_avg, mse, mape  # res['AP']
     else:
-        return 0
+        return 0, 0, 0
 
 
 def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
@@ -244,7 +246,7 @@ def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
         gt_val_dataset, num_replicas=opt.world_size, rank=opt.rank)
 
     gt_val_loader = torch.utils.data.DataLoader(
-        gt_val_dataset, batch_size=batch_size, shuffle=False, num_workers=20, drop_last=False, sampler=gt_val_sampler)
+        gt_val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=False, sampler=gt_val_sampler)
     kpt_pred = {}
     m.eval()
 

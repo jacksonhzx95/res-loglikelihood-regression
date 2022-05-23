@@ -6,10 +6,9 @@ PORT=${3:-23456}
 
 HOST=$(hostname -i)
 
-python ./scripts/validate.py \
+python ./scripts/validate_scoliosis.py \
     --cfg ${CONFIG} \
-    --valid-batch 64 \
-    --flip-test \
+    --valid-batch 16 \
     --checkpoint ${CKPT} \
     --launcher pytorch --rank 0 \
     --dist-url tcp://${HOST}:${PORT} \

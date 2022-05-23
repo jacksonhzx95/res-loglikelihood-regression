@@ -109,7 +109,7 @@ class Scoliosis_X_ray(data.Dataset):
                  lazy_import=False,
                  **cfg):
         self._cfg = cfg
-        # cfg = cfg['cfg']
+        # cfg = cfg['cfg']['DATASET']['TRAIN']
         self._root = cfg['ROOT']
         self._img_prefix = cfg['IMG_PREFIX']
         self._ann_file = os.path.join(self._root, cfg['ANN'])
@@ -249,8 +249,7 @@ if __name__ == '__main__':
         input_h=1024,
         input_w=512)'''
 
-    cfg_file_name = '/Users/huangzixun/Documents/python_code/res-loglikelihood-regression/configs' \
-                    '/1024x512_res50_scoliosic_regress-flow.yaml'
+    cfg_file_name = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/configs/512_res50_scoliosic_regress.yaml'
     cfg = update_config(cfg_file_name)
     # print(cfg)
     train_dataset = Scoliosis_X_ray(train=True,

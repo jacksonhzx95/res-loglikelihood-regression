@@ -14,9 +14,12 @@ class NullWriter(object):
     def write(self, arg):
         pass
 
+    def flush(self):
+        pass
 
 class DataLogger(object):
     """Average data logger."""
+
     def __init__(self):
         self.clear()
 
@@ -65,6 +68,7 @@ def mask_cross_entropy(pred, target):
     return F.binary_cross_entropy_with_logits(
         pred, target, reduction='mean')[None]
 
+
 # def evaluate_Scoliosis()
 
 
@@ -83,8 +87,12 @@ def evaluate_mAP(res_file, ann_type='bbox', ann_file='person_keypoints_val2017.j
         True: disable running log.
 
     """
+
     class NullWriter(object):
         def write(self, arg):
+            pass
+
+        def flush(self):
             pass
 
     ann_file = os.path.join('./data/coco/annotations/', ann_file)
@@ -235,6 +243,23 @@ def calc_coord_accuracy(output, target, hm_shape, output_3d=False, num_joints=No
         return sum_acc / cnt
     else:
         return 0
+
+
+def calc_dist_scoliosis(preds, target, normalize):
+    """Calculate normalized distances"""
+    preds = preds.astype(np.float32)
+    target = target.astype(np.float32)
+    dists = np.zeros(preds.shape[0])
+
+    for c in range(preds.shape[0]):
+        if target[c, 0] > 1 and target[c, 1] > 1:
+            normed_preds = preds[c, :] / normalize
+            normed_targets = target[c, :] / normalize
+            dists[c] = np.linalg.norm(normed_preds - normed_targets)
+        else:
+            dists[c] = -1
+
+    return dists
 
 
 def calc_dist(preds, target, normalize):

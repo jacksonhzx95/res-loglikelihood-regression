@@ -345,9 +345,10 @@ class ScoliosisTransform(object):
         img = cv2.warpAffine(src, trans, (int(inp_w), int(inp_h)), flags=cv2.INTER_LINEAR)
         # bbox = (0, 0, inp_w, inp_h)
         img = im_to_torch(img)
-        img[0].add_(-0.406)
-        img[1].add_(-0.457)
-        img[2].add_(-0.480)
+        img = img.add_(-0.5)
+                # img[0].add_(-0.406)
+                # img[1].add_(-0.457)
+                # img[2].add_(-0.480)
 
         return img
 
@@ -480,9 +481,11 @@ class ScoliosisTransform(object):
 
 
         img = im_to_torch(img)
-        img[0].add_(-0.406)
-        img[1].add_(-0.457)
-        img[2].add_(-0.480)
+        print(img.max)
+        # img = img / 255
+        img.add_(-0.5)
+        # img[1].add_(-0.457)
+        # img[2].add_(-0.480)
 
         output = {
             'type': '2d_data',
