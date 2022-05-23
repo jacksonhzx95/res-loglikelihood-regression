@@ -27,7 +27,7 @@ pip install cython
 python setup.py develop
 ```
 3. Install [COCOAPI](https://github.com/cocodataset/cocoapi).
-``` bash
+``` bashaaa
 pip install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 ```
 4. Init `data` directory:
