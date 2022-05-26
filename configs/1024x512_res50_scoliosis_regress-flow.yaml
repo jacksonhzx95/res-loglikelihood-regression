@@ -2,12 +2,15 @@ DATASET:
   TRAIN:
     TYPE: 'Scoliosis_X_ray'
     ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
-    IMG_PREFIX: 'data/training'
-    ANN: 'labels/training'
+    IMG_PREFIX: 'data/train'
+    ANN: 'labels/train'
     AUG:
-      FLIP: false
-      ROT_FACTOR: 20
-      SCALE_FACTOR: 0.25
+      FLIP: true
+      SHIFT_FACTOR:
+        - 0.1
+        - 0.1
+      ROT_FACTOR: 30
+      SCALE_FACTOR: 0.5
       NUM_JOINTS_HALF_BODY: 0
       PROB_HALF_BODY: 0
   VAL:
@@ -34,7 +37,7 @@ DATA_PRESET:
   - 128
 MODEL:
   TYPE: 'RegressFlow'
-  PRETRAINED: ''
+  PRETRAINED:  './checkpoints/refine_2.pth'
   TRY_LOAD: ''
   NUM_FC_FILTERS:
   - -1
@@ -48,10 +51,10 @@ TRAIN:
   WORLD_SIZE: 8
   BATCH_SIZE: 8
   BEGIN_EPOCH: 0
-  END_EPOCH: 1000
+  END_EPOCH: 800
   OPTIMIZER: 'adam'
-  LR: 0.002
-  LR_FACTOR: 0.1
+  LR: 0.001
+  LR_FACTOR: 0.3
   LR_STEP:
-  - 700
   - 800
+  - 1200

@@ -117,11 +117,13 @@ class Scoliosis_X_ray(data.Dataset):
         self._lazy_import = lazy_import
         self._skip_empty = skip_empty
         self._train = train
+
         self.img_dir = os.path.join(self._root, self._img_prefix)
         # self.label_dir =os.path.join(self._root, self._ann_file)
         if 'AUG' in cfg.keys():
             self._scale_factor = cfg['AUG']['SCALE_FACTOR']
             self._rot = cfg['AUG']['ROT_FACTOR']
+            self._shift = cfg['AUG']['SHIFT_FACTOR']
             self.num_joints_half_body = cfg['AUG']['NUM_JOINTS_HALF_BODY']
             self.prob_half_body = cfg['AUG']['PROB_HALF_BODY']
         else:
@@ -129,6 +131,7 @@ class Scoliosis_X_ray(data.Dataset):
             self._rot = 0
             self.num_joints_half_body = -1
             self.prob_half_body = -1
+            self._shift = (0, 0)
 
         self._input_size = self._preset_cfg['IMAGE_SIZE']
         self._output_size = self._preset_cfg['HEATMAP_SIZE']
@@ -162,7 +165,7 @@ class Scoliosis_X_ray(data.Dataset):
                 input_size=self._input_size,
                 output_size=self._output_size,
                 rot=self._rot, sigma=self._sigma,
-                train=self._train, loss_type=self._loss_type)
+                train=self._train, loss_type=self._loss_type, shift=self._shift)
         else:
             raise NotImplementedError
 

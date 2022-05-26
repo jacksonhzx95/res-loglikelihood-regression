@@ -4,9 +4,21 @@ import cv2
 import numpy as np
 import torch
 
-from ..bbox import _box_to_center_scale, _center_scale_to_box
+from ..bbox import _box_to_center_scale, _center_scale_to_box, get_center_scale
 from ..transforms import (affine_transform, flip_joints_3d,
                           get_affine_transform, im_to_torch)
+
+from ..transform import Compose, ConvertImgFloat, PhotometricDistort
+
+
+class Preprocessing(object):
+    def __init__(self):
+        self.data_aug = Compose([ConvertImgFloat(),
+                                 PhotometricDistort()])
+
+    def __call__(self, img, pts):
+        img_out, pts = self.data_aug(img.copy(), pts)
+        return img_out, pts
 
 
 class SimpleTransform(object):
@@ -305,14 +317,14 @@ class ScoliosisTransform(object):
 
     def __init__(self, dataset, scale_factor,
                  input_size, output_size, rot, sigma,
-                 train, loss_type='heatmap'):
+                 train, loss_type='heatmap', shift=(0, 0)):
         self._joint_pairs = dataset.joint_pairs
         self._scale_factor = scale_factor
         self._rot = rot
-
+        self.shift = shift
         self._input_size = input_size  # preset input size, not the size of the exact image
         self._heatmap_size = output_size
-
+        # self.shift =
         self._sigma = sigma
         self._train = train
         self._loss_type = loss_type
@@ -322,7 +334,7 @@ class ScoliosisTransform(object):
         self.imght = input_size[0]
         self.pixel_std = 1
         self.align_coord = True
-
+        self.process = Preprocessing()
         if train:
             self.num_joints_half_body = dataset.num_joints_half_body
             self.prob_half_body = dataset.prob_half_body
@@ -331,10 +343,9 @@ class ScoliosisTransform(object):
             self.lower_body_ids = dataset.lower_body_ids
 
     def test_transform(self, src):
-        center, scale = _box_to_center_scale(
-            0, 0, self.imgwidth, self.imght, self._aspect_ratio)
-        # center = (self._input_size[0] / 2, self._input_size[1] / 2)
-        # scale = self._aspect_ratio
+
+        center, scale = get_center_scale(
+            self.imgwidth, self.imght, self._aspect_ratio)
 
         scale = scale * 1.0
 
@@ -346,9 +357,9 @@ class ScoliosisTransform(object):
         # bbox = (0, 0, inp_w, inp_h)
         img = im_to_torch(img)
         img = img.add_(-0.5)
-                # img[0].add_(-0.406)
-                # img[1].add_(-0.457)
-                # img[2].add_(-0.480)
+        # img[0].add_(-0.406)
+        # img[1].add_(-0.457)
+        # img[2].add_(-0.480)
 
         return img
 
@@ -416,7 +427,9 @@ class ScoliosisTransform(object):
 
     def __call__(self, src, label):
         gt_joints = label['joints']
-
+        # if self._train:
+        #     src, gt_joints = self.process(src, gt_joints)
+        # src = np.clip(src, a_min=0., a_max=255.)
         imgwidth, imght = label['width'], label['height']
         assert imgwidth == src.shape[1] and imght == src.shape[0]
         self.num_joints = gt_joints.shape[0]
@@ -426,25 +439,23 @@ class ScoliosisTransform(object):
 
         input_size = self._input_size
 
-        # center = np.array((input_size[1] / 2, input_size[0] / 2))
-        # scale = self._aspect_ratio
-
-        center, scale = _box_to_center_scale(
-            0, 0, imgwidth, imght, self._aspect_ratio)
+        center, scale = get_center_scale(imgwidth, imght, self._aspect_ratio, )
+        # center, scale = _box_to_center_scale(
+        #     0, 0, imgwidth, imght, self._aspect_ratio, 1)
         # half body transform
-        if self._train and (
+        '''if self._train and (
                 np.sum(joints_vis[:, 0]) > self.num_joints_half_body and np.random.rand() < self.prob_half_body):
             c_half_body, s_half_body = self.half_body_transform(
                 gt_joints[:, :, 0], joints_vis
             )
 
             if c_half_body is not None and s_half_body is not None:
-                center, scale = c_half_body, s_half_body
-
+                center, scale = c_half_body, s_half_body'''
+        #
         # rescale
         if self._train:
             sf = self._scale_factor
-            scale = scale * random.uniform(1 - sf, 1 + sf)
+            scale = scale * random.uniform(1-sf, 1 + sf)
         else:
             scale = scale * 1.0
 
@@ -454,6 +465,13 @@ class ScoliosisTransform(object):
             r = random.uniform(-rf, rf) if random.random() <= 0.5 else 0
         else:
             r = 0
+        # shift
+        if self._train:
+            sft_x = random.uniform(-self.shift[0], self.shift[0]) if random.random() <= 0.5 else 0
+            sft_y = random.uniform(-self.shift[1], self.shift[1]) if random.random() <= 0.5 else 0
+            sft = np.array([sft_x, sft_y], dtype=np.float32)
+        else:
+            sft = np.array([0, 0], dtype=np.float32)
 
         joints = gt_joints
         if random.random() > 0.5 and self._train:
@@ -466,7 +484,7 @@ class ScoliosisTransform(object):
             center[0] = imgwidth - center[0] - 1
 
         inp_h, inp_w = input_size
-        trans = get_affine_transform(center, scale, r, [inp_w, inp_h])
+        trans = get_affine_transform(center, scale, r, [inp_w, inp_h], shift=sft)
         img = cv2.warpAffine(src, trans, (int(inp_w), int(inp_h)), flags=cv2.INTER_LINEAR)
 
         # deal with joints visibility this part contains problem
@@ -478,10 +496,11 @@ class ScoliosisTransform(object):
         target_hm, target_hm_weight = self._target_generator(joints.copy(), self.num_joints)
         target_uv, target_uv_weight, target_visible, target_visible_weight = self._integral_target_generator(
             joints.copy(), self.num_joints, inp_h, inp_w)
-
-
+        if self._train:
+            img, gt_joints = self.process(img, gt_joints)
+        img = np.clip(img, a_min=0., a_max=255.)
         img = im_to_torch(img)
-        print(img.max)
+        # print(img.max)
         # img = img / 255
         img.add_(-0.5)
         # img[1].add_(-0.457)

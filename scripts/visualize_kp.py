@@ -4,7 +4,7 @@ import os
 from scipy.io import loadmat
 import numpy as np
 from rlepose.utils.transforms import transform_preds
-
+from rlepose.utils.bbox import _box_to_center_scale, _center_scale_to_box, get_center_scale
 
 def rearrange_pts(pts):
     boxes = []
@@ -28,8 +28,8 @@ def rearrange_pts(pts):
 
 
 if __name__ == "__main__":
-    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/default-1024x512_res50_scoliosic_regress-flow.yaml'
-
+    # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/default-1024x512_res50_scoliosic_regress-flow.yaml'
+    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/offline_work_place/default'
     kpt_json = os.path.join(exp_path, 'test_gt_kpt.json')
     # dataset_path = '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/data/test'
     DATASET_PATH = '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
@@ -53,18 +53,19 @@ if __name__ == "__main__":
         img = cv2.imread(os.path.join(data_path, img_name), cv2.IMREAD_COLOR)
         img_size = img.shape  # (H, W, C)
         img_h, img_w = img_size[:2]
-        kpt_w_beta = kpt_w
-        kpt_h_beta = kpt_h
+        _aspect_ratio = kpt_w / kpt_h
+        center, scale = get_center_scale(img_w, img_h, aspect_ratio=_aspect_ratio, scale_mult=1.25)
         # print(img_size)
         # modify the exact w, h ratio
-        if kpt_w > img_w / img_h * kpt_h:
-            kpt_w_beta = img_w / img_h * kpt_h
-        elif kpt_h > img_h / img_w * kpt_w:
-            kpt_h_beta = img_h / img_w * kpt_w
-        scale = np.array([img_w, img_h]) * 1.25
-        center = np.array([img_w * 0.5, img_h * 0.5])
-        scale_beta = np.array([kpt_w_beta, kpt_h_beta])
-        center_beta = np.array([kpt_w_beta * 0.5, kpt_h_beta * 0.5])
+        # if img_h > _aspect_ratio * img_h:
+        #     kpt_w_beta = img_w / kpt_h * img_w
+        # elif img_w > _aspect_ratio * img_w:
+        #     kpt_h_beta = kpt_w / kpt_h * img_h
+        # print(kpt_w_beta)
+        # scale = np.array([kpt_w_beta, kpt_h_beta]) * 1.25
+        # center = np.array([img_w * 0.5, img_h * 0.5])
+        # scale_beta = np.array([kpt_w_beta, kpt_h_beta])
+        # center_beta = np.array([kpt_w_beta * 0.5, kpt_h_beta * 0.5])
         for j in range(kpt_num):
             # img = cv2.circle(img, (int((kpt_coord[j * 3 + 1]) * img_size[0] / img_kpt_size[1]), int(kpt_coord[j *
             # 3] * img_size[1] / img_kpt_size[0])), radius=3, color=[0, 0, 255], thickness=3) coord_draw_beta =
@@ -74,12 +75,13 @@ if __name__ == "__main__":
             # center_beta, scale_beta, [kpt_w, kpt_h])
             coord_draw = transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]), center, scale,
                                          [kpt_w, kpt_h])
-            print(coord_draw)
-            img = cv2.circle(img, (int(coord_draw[0]), int(coord_draw[1])),
-                             radius=3, color=[0, 0, 255], thickness=3)
+            # print(coord_draw)
             img = cv2.circle(img, (int(gt_kpt[j][0]),
                                    int(gt_kpt[j][1])),
                              radius=3, color=[0, 255, 0], thickness=3)
+            img = cv2.circle(img, (int(coord_draw[0]), int(coord_draw[1])),
+                             radius=3, color=[0, 0, 255], thickness=3)
+
         cv2.imwrite(os.path.join(save_path, img_name), img)
         # cv2.imwrite(
         #     '/mnt/sd2/Keypoint_detection/HRNet-Facial-Landmark-Detection/visualization_test/hm_' + image_path[-10:],

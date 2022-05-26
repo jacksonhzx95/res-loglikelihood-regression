@@ -1,0 +1,60 @@
+DATASET:
+  TRAIN:
+    TYPE: 'Scoliosis_X_ray'
+    ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
+    IMG_PREFIX: 'data/train'
+    ANN: 'labels/train'
+    AUG:
+      FLIP: true
+      SHIFT_FACTOR:
+        - 0.1
+        - 0.1
+      ROT_FACTOR: 30
+      SCALE_FACTOR: 0.5
+      NUM_JOINTS_HALF_BODY: 0
+      PROB_HALF_BODY: 0
+  VAL:
+    TYPE: 'Scoliosis_X_ray'
+    ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
+
+    IMG_PREFIX: 'data/test'
+    ANN: 'labels/test'
+  TEST:
+    TYPE: 'Scoliosis_X_ray'
+    ROOT: '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
+    IMG_PREFIX: 'data/test'
+    DET_FILE: './exp/json/test_det_rcnn.json'
+    ANN: 'labels/test'
+DATA_PRESET:
+  TYPE: 'scoliosis'
+  SIGMA: 2
+  NUM_JOINTS: 68
+  IMAGE_SIZE:
+  - 1024
+  - 512
+  HEATMAP_SIZE:
+  - 256
+  - 128
+MODEL:
+  TYPE: 'RegressFlow'
+  PRETRAINED:  './checkpoints/refine_3.pth'
+  TRY_LOAD: ''
+  NUM_FC_FILTERS:
+  - -1
+  HIDDEN_LIST: -1
+  NUM_LAYERS: 50
+LOSS:
+  TYPE: 'RLELoss'
+TEST:
+  HEATMAP2COORD: 'coord'
+TRAIN:
+  WORLD_SIZE: 2
+  BATCH_SIZE: 4
+  BEGIN_EPOCH: 0
+  END_EPOCH: 2000
+  OPTIMIZER: 'adam'
+  LR: 0.001
+  LR_FACTOR: 0.3
+  LR_STEP:
+  - 800
+  - 1200

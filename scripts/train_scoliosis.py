@@ -52,8 +52,7 @@ def main_worker(gpu, opt, cfg):
         opt.gpu = gpu
 
     init_dist(opt)
-    best_mse = 70
-    best_smape = 13
+
     if opt.log:
         cfg_file_name = os.path.basename(opt.cfg)
         filehandler = logging.FileHandler(
@@ -88,9 +87,9 @@ def main_worker(gpu, opt, cfg):
     elif cfg.TRAIN.OPTIMIZER == 'sgd':
         optimizer = torch.optim.SGD(m.parameters(), lr=cfg.TRAIN.LR, momentum=0.9, weight_decay=0.0001)
 
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
-        optimizer, milestones=cfg.TRAIN.LR_STEP, gamma=cfg.TRAIN.LR_FACTOR)
-
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
+    #     optimizer, milestones=cfg.TRAIN.LR_STEP, gamma=cfg.TRAIN.LR_FACTOR)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.999, last_epoch=-1)
     train_dataset = builder.build_dataset(cfg.DATASET.TRAIN, preset_cfg=cfg.DATA_PRESET, train=True, heatmap2coord=cfg.TEST.HEATMAP2COORD)
     train_sampler = torch.utils.data.distributed.DistributedSampler(
         train_dataset, num_replicas=opt.world_size, rank=opt.rank)
@@ -103,7 +102,8 @@ def main_worker(gpu, opt, cfg):
 
     opt.trainIters = 0
     best_err = 999
-
+    best_mse = 70
+    best_smape = 13
     for i in range(cfg.TRAIN.BEGIN_EPOCH, cfg.TRAIN.END_EPOCH):
         opt.epoch = i
         train_sampler.set_epoch(i)
@@ -118,10 +118,8 @@ def main_worker(gpu, opt, cfg):
         lr_scheduler.step()
 
         if (i + 1) % opt.snapshot == 0:
-            # Save checkpoint
-            if opt.log:
-                torch.save(m.module.state_dict(), './exp/{}-{}/model_{}.pth'.format(opt.exp_id, cfg.FILE_NAME, opt.epoch))
-            # Prediction Test
+            # Save checkpoint if opt.log: # torch.save(m.module.state_dict(), './exp/{}-{}/model_{}.pth'.format(
+            # opt.exp_id, cfg.FILE_NAME, opt.epoch)) Prediction Test
             with torch.no_grad():
                 if output_3d:
                     err = validate_gt_3d(m, opt, cfg, heatmap_to_coord)

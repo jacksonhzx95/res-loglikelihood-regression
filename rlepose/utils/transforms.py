@@ -208,11 +208,11 @@ def flip_joints_3d(joints_3d, width, joint_pairs):
     # flip horizontally
     joints[:, 0, 0] = width - joints[:, 0, 0] - 1
     # change left-right parts
-    # for pair in joint_pairs:
-    #     joints[pair[0], :, 0], joints[pair[1], :, 0] = \
-    #         joints[pair[1], :, 0], joints[pair[0], :, 0].copy()
-    #     joints[pair[0], :, 1], joints[pair[1], :, 1] = \
-    #         joints[pair[1], :, 1], joints[pair[0], :, 1].copy()
+    for pair in joint_pairs:
+        joints[pair[0], :, 0], joints[pair[1], :, 0] = \
+            joints[pair[1], :, 0], joints[pair[0], :, 0].copy()
+        joints[pair[0], :, 1], joints[pair[1], :, 1] = \
+            joints[pair[1], :, 1], joints[pair[0], :, 1].copy()
 
     joints[:, :, 0] *= joints[:, :, 1]
     return joints

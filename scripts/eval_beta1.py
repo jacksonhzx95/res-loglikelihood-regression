@@ -5,7 +5,7 @@ from scipy.io import loadmat
 import numpy as np
 from rlepose.utils.transforms import transform_preds
 from rlepose.utils import cobb_evaluate
-
+from rlepose.utils.bbox import _box_to_center_scale, _center_scale_to_box, get_center_scale
 
 def rearrange_pts(pts):
     boxes = []
@@ -29,7 +29,8 @@ def rearrange_pts(pts):
 
 
 if __name__ == "__main__":
-    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/default-1024x512_res50_scoliosic_regress-flow.yaml'
+    # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/default-1024x512_res50_scoliosic_regress-flow.yaml'
+    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/offline_work_place/default'
     # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/wo_nf_beta1-1024x512_res50_scoliosic_regress.yaml'
     kpt_json = os.path.join(exp_path, 'test_gt_kpt.json')
     # dataset_path = '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/data/test'
@@ -61,22 +62,24 @@ if __name__ == "__main__":
         img_h, img_w = img_size[:2]
         kpt_w_beta = kpt_w
         kpt_h_beta = kpt_h
+        _aspect_ratio = kpt_w / kpt_h
+        center, scale = get_center_scale(img_w, img_h, aspect_ratio=_aspect_ratio, scale_mult=1.25)
         # print(img_size)
         # modify the exact w, h ratio
-        if kpt_w > img_w / img_h * kpt_h:
-            kpt_w_beta = img_w / img_h * kpt_h
-        elif kpt_h > img_h / img_w * kpt_w:
-            kpt_h_beta = img_h / img_w * kpt_w
-        scale = np.array([img_w, img_h]) * 1.2
-        center = np.array([img_w * 0.5, img_h * 0.5])
-        scale_beta = np.array([kpt_w_beta, kpt_h_beta])
-        center_beta = np.array([kpt_w_beta * 0.5, kpt_h_beta * 0.5])
+        # if kpt_w > img_w / img_h * kpt_h:
+        #     kpt_w_beta = kpt_w / kpt_h * img_h
+        # elif kpt_h > img_h / img_w * kpt_w:
+        #     kpt_h_beta = kpt_h / kpt_w * img_w
+        # scale = np.array([kpt_w_beta, kpt_h_beta]) * 1.25
+        # center = np.array([kpt_w * 0.5, kpt_h * 0.5])
+        # scale_beta = np.array([kpt_w_beta, kpt_h_beta])
+        # center_beta = np.array([kpt_w_beta * 0.5, kpt_h_beta * 0.5])
         for j in range(kpt_num):
             coord_draw = transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]), center, scale,
                                          [kpt_w, kpt_h])
             pred_pts.append((int(coord_draw[0]), int(coord_draw[1])))
             gt_pts.append((int(gt_kpt[j][0]), int(gt_kpt[j][1])))
-            landmark_dist.append(abs(coord_draw[0] - gt_kpt[j][0] + (coord_draw[1] - gt_kpt[j][1])))
+            # landmark_dist.append(abs(coord_draw[0] - gt_kpt[j][0] + (coord_draw[1] - gt_kpt[j][1])))
             landmark_dist.append(np.sqrt((coord_draw[0] - gt_kpt[j][0]) ** 2 + (coord_draw[1] - gt_kpt[j][1]) ** 2))
         pr_cobb_angles.append(cobb_evaluate.cobb_angle_calc(pred_pts, img))
         gt_cobb_angles.append(cobb_evaluate.cobb_angle_calc(gt_pts, img))
