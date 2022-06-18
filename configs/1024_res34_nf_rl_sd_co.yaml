@@ -7,10 +7,10 @@ DATASET:
     AUG:
       FLIP: true
       SHIFT_FACTOR:
-        - 0.1
-        - 0.1
+        - 0.15
+        - 0.15
       ROT_FACTOR: 30
-      SCALE_FACTOR: 0.5
+      SCALE_FACTOR: 0.4
       NUM_JOINTS_HALF_BODY: 0
       PROB_HALF_BODY: 0
   VAL:
@@ -37,12 +37,12 @@ DATA_PRESET:
   - 128
 MODEL:
   TYPE: 'RegressFlow'
-  PRETRAINED:  './checkpoints/refine_2.pth'
+  PRETRAINED:  './checkpoints/best_mse.pth'
   TRY_LOAD: ''
   NUM_FC_FILTERS:
   - -1
   HIDDEN_LIST: -1
-  NUM_LAYERS: 50
+  NUM_LAYERS: 34
 LOSS:
   TYPE: 'RLELoss'
 TEST:
@@ -51,10 +51,11 @@ TRAIN:
   WORLD_SIZE: 2
   BATCH_SIZE: 8
   BEGIN_EPOCH: 0
-  END_EPOCH: 800
+  END_EPOCH: 2000
   OPTIMIZER: 'adam'
-  LR: 0.0001
+  LR: 0.0003
   LR_FACTOR: 0.3
   LR_STEP:
+  - 400
   - 800
   - 1200

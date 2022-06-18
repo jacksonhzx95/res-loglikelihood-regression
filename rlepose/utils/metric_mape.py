@@ -6,6 +6,7 @@ import numpy as np
 from rlepose.utils.transforms import transform_preds
 from rlepose.utils import cobb_evaluate
 from rlepose.utils.bbox import _box_to_center_scale, _center_scale_to_box, get_center_scale
+from rlepose.utils.landmark_statistics import LandmarkStatistics
 
 def rearrange_pts(pts):
     boxes = []
@@ -27,6 +28,56 @@ def rearrange_pts(pts):
         boxes.append(br)
     return np.asarray(boxes, np.float32)
 
+def cal_deo(kpt_json, img_size):
+    DATASET_PATH = '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
+    IMG_PREFIX = 'RawImage/TestAll'
+    ANN = '400_senior'
+    gt_path = os.path.join(DATASET_PATH, ANN)
+    data_path = os.path.join(DATASET_PATH, IMG_PREFIX)
+    kpt_data = kpt_json
+    kpt_h, kpt_w = img_size  # (512, 256) or (1024, 512)
+    kpt_num = 19
+    pr_cobb_angles = []
+    gt_cobb_angles = []
+    landmark_dist = []
+    landmark_statistic = LandmarkStatistics()
+    for i in range(len(kpt_data)):
+        pred_pts = []
+        gt_pts = []
+        img_name = kpt_data[i]['image_id']
+        kpt_coord = kpt_data[i]['keypoints']
+        # load gt ann
+        annoFolder = os.path.join(gt_path, img_name[:-4] + '.txt')
+        # gt_img_ann = loadmat(os.path.join(gt_path, img_name))['p2']
+        # gt_kpt = rearrange_pts(gt_img_ann)
+        pts = []
+        with open(annoFolder, 'r') as f:
+            lines = f.readlines()
+            for i in range(kpt_num):
+                coordinates = lines[i].replace('\n', '').split(',')
+                coordinates_int = [int(i) for i in coordinates]
+                pts.append(coordinates_int)
+        gt_kpt = np.array(pts)
+        # read img
+
+        img = cv2.imread(os.path.join(data_path, img_name), cv2.IMREAD_COLOR)
+        img_size = img.shape  # (H, W, C)
+        img_h, img_w = img_size[:2]
+        _aspect_ratio = kpt_w / kpt_h
+        center, scale = get_center_scale(img_w, img_h, aspect_ratio=_aspect_ratio, scale_mult=1.25)
+
+        # center_beta = np.array([kpt_w_beta * 0.5, kpt_h_beta * 0.5])
+        for j in range(kpt_num):
+            coord_draw = transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]), center, scale,
+                                         [kpt_w, kpt_h])
+            pred_pts.append((int(coord_draw[0]), int(coord_draw[1])))
+            gt_pts.append((int(gt_kpt[j][0]), int(gt_kpt[j][1])))
+            # landmark_dist.append(abs(coord_draw[0] - gt_kpt[j][0] + (coord_draw[1] - gt_kpt[j][1])))
+            landmark_dist.append(np.sqrt((coord_draw[0] - gt_kpt[j][0]) ** 2 + (coord_draw[1] - gt_kpt[j][1]) ** 2))
+        landmark_statistic.add_landmarks(image_id=img_name, predicted=pred_pts, groundtruth=gt_pts, spacing=0.1)
+    overview_string = landmark_statistic.get_overview_string([2.0, 3.0, 4.0])
+
+    return overview_string
 
 # def cal_mape(kpt_json, img_size)
 def cal_mape(kpt_json, img_size):

@@ -1,17 +1,17 @@
 import json
 import os
 import pickle as pk
-
+from rlepose.utils.landmark_statistics import LandmarkStatistics
 import numpy as np
 import torch
 from torch.nn.utils import clip_grad
 from tqdm import tqdm
-
+from rlepose.utils import cobb_evaluate
 from rlepose.models import builder
 from rlepose.utils.metrics import DataLogger, calc_accuracy, calc_coord_accuracy, evaluate_mAP
 from rlepose.utils.nms import oks_pose_nms
 from rlepose.utils.transforms import flip, flip_output
-
+from rlepose.utils.metric_mape import cal_deo
 
 def clip_gradient(optimizer, max_norm, norm_type):
     """
@@ -38,7 +38,7 @@ def train(opt, cfg, train_loader, m, criterion, optimizer):
     if opt.log:
         train_loader = tqdm(train_loader, dynamic_ncols=True)
 
-    for i, (inps, labels, _, bboxes) in enumerate(train_loader):
+    for i, (inps, labels, _) in enumerate(train_loader):
         inps = inps.cuda()
 
         for k, _ in labels.items():
@@ -162,22 +162,26 @@ def validate(m, opt, cfg, heatmap_to_coord, batch_size=20, use_nms=False):
 
 
 def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
+
     gt_val_dataset = builder.build_dataset(cfg.DATASET.VAL, preset_cfg=cfg.DATA_PRESET, train=False, heatmap2coord=cfg.TEST.HEATMAP2COORD)
     gt_val_sampler = torch.utils.data.distributed.DistributedSampler(
         gt_val_dataset, num_replicas=opt.world_size, rank=opt.rank)
-
     gt_val_loader = torch.utils.data.DataLoader(
         gt_val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, drop_last=False, sampler=gt_val_sampler)
     kpt_json = []
     m.eval()
-
+    hm_shape = cfg.DATA_PRESET.get('HEATMAP_SIZE')
+    depth_dim = cfg.MODEL.get('DEPTH_DIM')
+    output_3d = cfg.DATA_PRESET.get('OUT_3D', False)
+    hm_shape = (hm_shape[1], hm_shape[0], depth_dim)
     hm_size = cfg.DATA_PRESET.HEATMAP_SIZE
     flip_shift = cfg.TEST.get('FLIP_SHIFT', True)
-
+    acc_val_sum = 0
+    val_count = 0
     if opt.log:
         gt_val_loader = tqdm(gt_val_loader, dynamic_ncols=True)
 
-    for inps, labels, img_ids, bboxes in gt_val_loader:
+    for inps, labels, img_ids in gt_val_loader:
         inps = inps.cuda()
         output = m(inps)
 
@@ -191,31 +195,31 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
                     continue
                 if output[k] is not None:
                     output[k] = (output[k] + output_flipped[k]) / 2
-
+        acc_val = calc_coord_accuracy(output, labels, hm_shape, output_3d=output_3d)
+        acc_val_sum += acc_val
         for i in range(inps.shape[0]):
-            bbox = bboxes[i].tolist()
+            # bbox = bboxes[i].tolist()
             pose_coords, pose_scores = heatmap_to_coord(
-                output, bbox, idx=i)
-
+                output, idx=i)
+            # acc = calc_coord_accuracy()
             keypoints = np.concatenate((pose_coords[0], pose_scores[0]), axis=1)
             keypoints = keypoints.reshape(-1).tolist()
+
+            val_count += 1
             data = dict()
-            data['bbox'] = bboxes[i].tolist()
             data['image_id'] = str(img_ids[i])
-            # data['image_id'] = int(img_ids[i])
             data['score'] = float(np.mean(pose_scores) + np.max(pose_scores))
             data['category_id'] = 1
             data['keypoints'] = keypoints
-
             kpt_json.append(data)
 
     with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{opt.rank}.pkl'), 'wb') as fid:
         pk.dump(kpt_json, fid, pk.HIGHEST_PROTOCOL)
-
+    acc_val_avg = acc_val_sum/val_count
     torch.distributed.barrier()  # Make sure all JSON files are saved
 
     if opt.rank == 0:
-        kpt_json_all = []
+        kpt_json_all = kpt_json
         for r in range(opt.world_size):
             with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{r}.pkl'), 'rb') as fid:
                 kpt_pred = pk.load(fid)
@@ -225,11 +229,11 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
 
         with open(os.path.join(opt.work_dir, 'test_gt_kpt.json'), 'w') as fid:
             json.dump(kpt_json_all, fid)
-        res = evaluate_mAP(os.path.join(opt.work_dir, 'test_gt_kpt.json'), ann_type='keypoints')
+        overview = cal_deo(kpt_json_all, cfg.DATA_PRESET.get('IMAGE_SIZE'))
 
-        return res['AP']
+        return acc_val_avg, overview  # res['AP']
     else:
-        return 0
+        return 0, 0
 
 
 def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
@@ -247,7 +251,7 @@ def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
     if opt.log:
         gt_val_loader = tqdm(gt_val_loader, dynamic_ncols=True)
 
-    for inps, labels, img_ids, bboxes in gt_val_loader:
+    for inps, labels, img_ids in gt_val_loader:
         inps = inps.cuda()
         output = m(inps)
 
@@ -262,19 +266,18 @@ def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
                     output[k] = (output[k] + output_flipped[k]) / 2
 
         for i in range(inps.shape[0]):
-            bbox = bboxes[i].tolist()
             pose_coords, pose_scores = heatmap_to_coord(
-                output, bbox, idx=i)
+                output, idx=i)
             assert pose_coords.shape[0] == 1
 
-            kpt_pred[int(img_ids[i])] = {
+            kpt_pred[str(img_ids[i])] = {
                 'uvd': pose_coords[0]
             }
 
     with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{opt.rank}.pkl'), 'wb') as fid:
         pk.dump(kpt_pred, fid, pk.HIGHEST_PROTOCOL)
 
-    # torch.barrier()  # Make sure all JSON files are saved
+    torch.distributed.barrier()  # Make sure all JSON files are saved
 
     if opt.rank == 0:
         kpt_all_pred = {}

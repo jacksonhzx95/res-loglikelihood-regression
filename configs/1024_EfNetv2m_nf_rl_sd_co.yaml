@@ -5,12 +5,12 @@ DATASET:
     IMG_PREFIX: 'data/train'
     ANN: 'labels/train'
     AUG:
-      FLIP: true
+      FLIP: false
       SHIFT_FACTOR:
-        - 0.1
+        - 0
         - 0.1
       ROT_FACTOR: 30
-      SCALE_FACTOR: 0.5
+      SCALE_FACTOR: 0.3
       NUM_JOINTS_HALF_BODY: 0
       PROB_HALF_BODY: 0
   VAL:
@@ -36,25 +36,26 @@ DATA_PRESET:
   - 256
   - 128
 MODEL:
-  TYPE: 'RegressFlow'
-  PRETRAINED:  './checkpoints/refine_2.pth'
+  TYPE: 'RegressFlow_EFNetv2'
+  PRETRAINED:  ''
   TRY_LOAD: ''
   NUM_FC_FILTERS:
   - -1
   HIDDEN_LIST: -1
-  NUM_LAYERS: 50
 LOSS:
   TYPE: 'RLELoss'
 TEST:
   HEATMAP2COORD: 'coord'
 TRAIN:
   WORLD_SIZE: 2
-  BATCH_SIZE: 8
+  BATCH_SIZE: 4
   BEGIN_EPOCH: 0
-  END_EPOCH: 800
-  OPTIMIZER: 'adam'
-  LR: 0.0001
-  LR_FACTOR: 0.3
+  END_EPOCH: 2000
+  OPTIMIZER: 'sgd'
+  LR: 0.00001
+  LR_FACTOR: 0.1
   LR_STEP:
+  - 200
+  - 400
   - 800
   - 1200

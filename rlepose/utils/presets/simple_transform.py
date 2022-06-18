@@ -316,12 +316,13 @@ class ScoliosisTransform(object):
     """
 
     def __init__(self, dataset, scale_factor,
-                 input_size, output_size, rot, sigma,
+                 input_size, output_size, flip, rot, sigma,
                  train, loss_type='heatmap', shift=(0, 0)):
         self._joint_pairs = dataset.joint_pairs
         self._scale_factor = scale_factor
         self._rot = rot
         self.shift = shift
+        self.flip = flip
         self._input_size = input_size  # preset input size, not the size of the exact image
         self._heatmap_size = output_size
         # self.shift =
@@ -354,12 +355,8 @@ class ScoliosisTransform(object):
 
         trans = get_affine_transform(center, scale, 0, [inp_w, inp_h])
         img = cv2.warpAffine(src, trans, (int(inp_w), int(inp_h)), flags=cv2.INTER_LINEAR)
-        # bbox = (0, 0, inp_w, inp_h)
         img = im_to_torch(img)
         img = img.add_(-0.5)
-        # img[0].add_(-0.406)
-        # img[1].add_(-0.457)
-        # img[2].add_(-0.480)
 
         return img
 
@@ -455,7 +452,8 @@ class ScoliosisTransform(object):
         # rescale
         if self._train:
             sf = self._scale_factor
-            scale = scale * random.uniform(1-sf, 1 + sf)
+            # scale = scale * random.uniform(1-sf, 1 + sf)
+            scale = scale * random.uniform(0.75, 1 + sf)
         else:
             scale = scale * 1.0
 
@@ -474,7 +472,8 @@ class ScoliosisTransform(object):
             sft = np.array([0, 0], dtype=np.float32)
 
         joints = gt_joints
-        if random.random() > 0.5 and self._train:
+        # flip
+        if random.random() > 0.5 and self.flip and self._train:
             # src, fliped = random_flip_image(src, px=0.5, py=0)
             # if fliped[0]:
             assert src.shape[2] == 3
@@ -500,11 +499,7 @@ class ScoliosisTransform(object):
             img, gt_joints = self.process(img, gt_joints)
         img = np.clip(img, a_min=0., a_max=255.)
         img = im_to_torch(img)
-        # print(img.max)
-        # img = img / 255
         img.add_(-0.5)
-        # img[1].add_(-0.457)
-        # img[2].add_(-0.480)
 
         output = {
             'type': '2d_data',

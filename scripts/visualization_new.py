@@ -4,7 +4,6 @@ import os
 from scipy.io import loadmat
 import numpy as np
 from rlepose.utils.transforms import transform_preds
-from rlepose.utils import cobb_evaluate
 from rlepose.utils.bbox import _box_to_center_scale, _center_scale_to_box, get_center_scale
 import pandas as pd
 
@@ -37,60 +36,49 @@ def rearrange_pts(pts):
 
 
 if __name__ == "__main__":
-    # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/default-1024x512_res50_scoliosic_regress-flow.yaml'
-    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/offline_work_place/default'
-    # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/wo_nf_beta1-1024x512_res50_scoliosic_regress.yaml'
+    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/offline_work_place/default1'
     kpt_json = os.path.join(exp_path, 'test_gt_kpt.json')
     # dataset_path = '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/data/test'
     DATASET_PATH = '/home/jackson/Documents/Project_BME/Datasets/scoliosis/xray/boostnet_labeldata/'
     IMG_PREFIX = 'data/test'
     ANN = 'labels/test'
+
     gt_path = os.path.join(DATASET_PATH, ANN)
     data_path = os.path.join(DATASET_PATH, IMG_PREFIX)
     save_path = os.path.join(exp_path, 'val_visual')
+    landmark_file = pd.read_csv(os.path.join(gt_path, 'landmarks.csv'), header=None)
+    name_file = pd.read_csv(os.path.join(gt_path, 'filenames.csv'), header=None)
+
     if not os.path.exists(save_path):
         os.makedirs(save_path)
     kpt_file = open(kpt_json)
     kpt_data = json.load(kpt_file)
     kpt_w, kpt_h = (512, 1024)
     kpt_num = 68
-    pr_cobb_angles = []
-    gt_cobb_angles = []
-    landmark_dist = []
     for i in range(len(kpt_data)):
-        pred_pts = []
-        gt_pts = []
         img_name = kpt_data[i]['image_id']
         kpt_coord = kpt_data[i]['keypoints']
-        gt_img_ann = loadmat(os.path.join(gt_path, img_name))['p2']
-        gt_kpt = rearrange_pts(gt_img_ann)
+        # gt_img_ann = loadmat(os.path.join(gt_path, img_name))['p2']
+        # gt_kpt = rearrange_pts(gt_img_ann)
         # read img
         img = cv2.imread(os.path.join(data_path, img_name), cv2.IMREAD_COLOR)
         img_size = img.shape  # (H, W, C)
         img_h, img_w = img_size[:2]
-        kpt_w_beta = kpt_w
-        kpt_h_beta = kpt_h
+        index = find_pd_index(name_file, item=img_name)
+        gt_landmark = landmark_file.iloc[index]
+        gt_landmark = gt_landmark.to_numpy().reshape(2, kpt_num)
+        gt_landmark = gt_landmark * [[img_w], [img_h]]
+        gt_landmark = np.transpose(gt_landmark, [1,0])
+        gt_kpt = rearrange_pts(gt_landmark)
         _aspect_ratio = kpt_w / kpt_h
         center, scale = get_center_scale(img_w, img_h, aspect_ratio=_aspect_ratio, scale_mult=1.25)
         for j in range(kpt_num):
             coord_draw = transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]), center, scale,
                                          [kpt_w, kpt_h])
-            pred_pts.append((int(coord_draw[0]), int(coord_draw[1])))
-            gt_pts.append((int(gt_kpt[j][0]), int(gt_kpt[j][1])))
-            # landmark_dist.append(abs(coord_draw[0] - gt_kpt[j][0] + (coord_draw[1] - gt_kpt[j][1])))
-            landmark_dist.append(np.sqrt((coord_draw[0] - gt_kpt[j][0]) ** 2 + (coord_draw[1] - gt_kpt[j][1]) ** 2))
-        pr_cobb_angles.append(cobb_evaluate.cobb_angle_calc(pred_pts, img))
-        gt_cobb_angles.append(cobb_evaluate.cobb_angle_calc(gt_pts, img))
+            img = cv2.circle(img, (int(gt_kpt[j][0]),
+                                   int(gt_kpt[j][1])),
+                             radius=3, color=[0, 255, 0], thickness=3)
+            img = cv2.circle(img, (int(coord_draw[0]), int(coord_draw[1])),
+                             radius=3, color=[0, 0, 255], thickness=3)
 
-    pr_cobb_angles = np.asarray(pr_cobb_angles, np.float32)
-    gt_cobb_angles = np.asarray(gt_cobb_angles, np.float32)
-    out_abs = abs(gt_cobb_angles - pr_cobb_angles)
-    out_add = gt_cobb_angles + pr_cobb_angles
-
-    term1 = np.sum(out_abs, axis=1)
-    term2 = np.sum(out_add, axis=1)
-
-    SMAPE = np.mean(term1 / term2 * 100)
-
-    print('mse of landmarkds is {}'.format(np.mean(landmark_dist)))
-    print('SMAPE is {}'.format(SMAPE))
+        cv2.imwrite(os.path.join(save_path, img_name), img)

@@ -9,7 +9,7 @@ import torch.multiprocessing as mp
 import torch.utils.data
 from rlepose.models import builder
 from rlepose.opt import cfg, logger, opt
-from rlepose.trainer_scoliosis import train, validate, validate_gt, validate_gt_3d
+from rlepose.trainer_ce import train, validate, validate_gt, validate_gt_3d
 from rlepose.utils.env import init_dist
 from rlepose.utils.metrics import NullWriter
 from rlepose.utils.transforms import get_coord, get_coord_scoliosis
@@ -58,6 +58,7 @@ def main_worker(gpu, opt, cfg):
         filehandler = logging.FileHandler(
             './exp/{}-{}/training.log'.format(opt.exp_id, cfg_file_name))
         streamhandler = logging.StreamHandler()
+
         logger.setLevel(logging.INFO)
         logger.addHandler(filehandler)
         logger.addHandler(streamhandler)
@@ -101,8 +102,6 @@ def main_worker(gpu, opt, cfg):
 
     opt.trainIters = 0
     best_err = 999
-    best_mse = 70
-    best_smape = 13
     for i in range(cfg.TRAIN.BEGIN_EPOCH, cfg.TRAIN.END_EPOCH):
         opt.epoch = i
         train_sampler.set_epoch(i)
@@ -129,19 +128,10 @@ def main_worker(gpu, opt, cfg):
                     logger.info(f'##### Epoch {opt.epoch} | gt results: {err}/{best_err} #####')
 
                 else:
-                    val_acc, mse, mape = validate_gt(m, opt, cfg, heatmap_to_coord)
+                    val_acc, overview = validate_gt(m, opt, cfg, heatmap_to_coord)
+                    logger.info(f'##### Epoch {opt.epoch} | test acc: {val_acc} ;')
 
-                    # det_AP = validate(m, opt, cfg, heatmap_to_coord)
-                    logger.info(f'##### Epoch {opt.epoch} | test acc: {val_acc} ; mse: {mse}; MAPE: {mape}#####')
-            if best_mse > mse:
-                torch.save(m.module.state_dict(),
-                           './exp/{}-{}/best_mse.pth'.format(opt.exp_id, cfg.FILE_NAME))
-                best_mse = mse
-            if best_smape > mape:
-                torch.save(m.module.state_dict(),
-                           './exp/{}-{}/best_smape.pth'.format(opt.exp_id, cfg.FILE_NAME))
-                best_smape = mape
-            logger.info(f' best mse: {best_mse}; Bset SMAPE: {best_smape}#####')
+            logger.info(overview)
         torch.distributed.barrier()  # Sync
 
     torch.save(m.module.state_dict(), './exp/{}-{}/final.pth'.format(opt.exp_id, cfg.FILE_NAME))

@@ -8,7 +8,7 @@ HOST=$(hostname -i)
 
 python ./scripts/validate_scoliosis_offline.py \
     --cfg ${CONFIG} \
-    --valid-batch 16 \
+    --valid-batch 2 \
     --checkpoint ${CKPT} \
     --launcher pytorch --rank 0 \
     --dist-url tcp://${HOST}:${PORT} \

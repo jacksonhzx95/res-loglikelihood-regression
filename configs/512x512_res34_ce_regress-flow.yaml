@@ -1,0 +1,59 @@
+DATASET:
+  TRAIN:
+    TYPE: 'CE_X_ray'
+    ROOT:  '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
+    IMG_PREFIX: 'RawImage/TrainingData'
+    ANN: '400_senior'
+    AUG:
+      FLIP: false
+      SHIFT_FACTOR:
+        - 0.1
+        - 0.1
+      ROT_FACTOR: 30
+      SCALE_FACTOR: 0.5
+      NUM_JOINTS_HALF_BODY: 0
+      PROB_HALF_BODY: 0
+  VAL:
+    TYPE: 'CE_X_ray'
+    ROOT:  '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
+    IMG_PREFIX: 'RawImage/TestAll'
+    ANN: '400_senior'
+  TEST:
+    TYPE: 'CE_X_ray'
+    ROOT:  '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
+    IMG_PREFIX: 'RawImage/TestAll'
+    ANN: '400_senior'
+    DET_FILE: './exp/json/test_det_rcnn.json'
+DATA_PRESET:
+  TYPE: 'cephalograms'
+  SIGMA: 2
+  NUM_JOINTS: 19
+  IMAGE_SIZE:
+  - 1024
+  - 1024
+  HEATMAP_SIZE:
+  - 256
+  - 256
+MODEL:
+  TYPE: 'RegressFlow'
+  PRETRAINED:  ''
+  TRY_LOAD: ''
+  NUM_FC_FILTERS:
+  - -1
+  HIDDEN_LIST: -1
+  NUM_LAYERS: 34
+LOSS:
+  TYPE: 'RLELoss'
+TEST:
+  HEATMAP2COORD: 'coord'
+TRAIN:
+  WORLD_SIZE: 2
+  BATCH_SIZE: 8
+  BEGIN_EPOCH: 0
+  END_EPOCH: 2000
+  OPTIMIZER: 'adam'
+  LR: 0.001
+  LR_FACTOR: 0.3
+  LR_STEP:
+  - 800
+  - 1200

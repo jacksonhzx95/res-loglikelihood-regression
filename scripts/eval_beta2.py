@@ -50,6 +50,8 @@ if __name__ == "__main__":
     save_path = os.path.join(exp_path, 'val_visual')
     if not os.path.exists(save_path):
         os.makedirs(save_path)
+    landmark_file = pd.read_csv(os.path.join(gt_path, 'landmarks.csv'), header=None)
+    name_file = pd.read_csv(os.path.join(gt_path, 'filenames.csv'), header=None)
     kpt_file = open(kpt_json)
     kpt_data = json.load(kpt_file)
     kpt_w, kpt_h = (512, 1024)
@@ -62,14 +64,21 @@ if __name__ == "__main__":
         gt_pts = []
         img_name = kpt_data[i]['image_id']
         kpt_coord = kpt_data[i]['keypoints']
-        gt_img_ann = loadmat(os.path.join(gt_path, img_name))['p2']
-        gt_kpt = rearrange_pts(gt_img_ann)
+        # gt_img_ann = loadmat(os.path.join(gt_path, img_name))['p2']
+        # gt_kpt = rearrange_pts(gt_img_ann)
         # read img
         img = cv2.imread(os.path.join(data_path, img_name), cv2.IMREAD_COLOR)
         img_size = img.shape  # (H, W, C)
         img_h, img_w = img_size[:2]
         kpt_w_beta = kpt_w
         kpt_h_beta = kpt_h
+        index = find_pd_index(name_file, item=img_name)
+        gt_landmark = landmark_file.iloc[index]
+        gt_landmark = gt_landmark.to_numpy().reshape(2, kpt_num)
+        gt_landmark = gt_landmark * [[img_w], [img_h]]
+        gt_landmark = np.transpose(gt_landmark, [1, 0])
+        gt_kpt = rearrange_pts(gt_landmark)
+
         _aspect_ratio = kpt_w / kpt_h
         center, scale = get_center_scale(img_w, img_h, aspect_ratio=_aspect_ratio, scale_mult=1.25)
         for j in range(kpt_num):
