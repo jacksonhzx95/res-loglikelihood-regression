@@ -692,6 +692,7 @@ class FPNHead(nn.Module):
             self.channels,
             num_classes,
             1,
+            act_cfg=None,
         )
 
     def forward(self, inputs):
@@ -710,4 +711,5 @@ class FPNHead(nn.Module):
         if self.dropout is not None:
             feat = self.dropout(feat)
         feat = self.out(feat)
+        feat = F.softmax(feat, dim=1)
         return feat

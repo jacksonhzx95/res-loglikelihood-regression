@@ -74,6 +74,7 @@ class HeatmapModel(nn.Module):
             in_channels=self.decoder_feature_channel,
             out_channels=self.decoder_feature_channel[0],
             num_outs=4,
+
         )
         self.head = FPNHead(feature_strides=(4, 8, 16, 32),
                             in_channels=[self.decoder_feature_channel[0]] * 4,
