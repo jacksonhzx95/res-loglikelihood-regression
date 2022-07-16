@@ -1,0 +1,64 @@
+DATASET:
+  TRAIN:
+    TYPE: 'Hand_X_ray'
+    ROOT:  '/home/jackson/Documents/Project_BME/Datasets/hand_x_ray/'
+    IMG_PREFIX: 'Images'
+    SPLIT: 'cv/set1/train.txt'
+    ANN: 'all.csv'
+    AUG:
+      FLIP: false
+      SHIFT_FACTOR:
+        - 0.1
+        - 0.15
+      ROT_FACTOR: 10
+      SCALE_FACTOR: 0.3
+      NUM_JOINTS_HALF_BODY: 0
+      PROB_HALF_BODY: 0
+  VAL:
+    TYPE: 'Hand_X_ray'
+    ROOT:  '/home/jackson/Documents/Project_BME/Datasets/hand_x_ray/'
+    IMG_PREFIX: 'Images'
+    SPLIT: 'cv/set1/test.txt'
+    ANN: 'all.csv'
+  TEST:
+    TYPE: 'Hand_X_ray'
+    ROOT:  '/home/jackson/Documents/Project_BME/Datasets/hand_x_ray/'
+    IMG_PREFIX: 'Images'
+    SPLIT: 'cv/set1/test.txt'
+    ANN: 'all.csv'
+    DET_FILE: './exp/json/test_det_rcnn.json'
+DATA_PRESET:
+  TYPE: 'cephalograms'
+  SIGMA: 3
+  NUM_JOINTS: 37
+  IMAGE_SIZE:
+  - 512
+  - 512
+  HEATMAP_SIZE:
+  - 128
+  - 128
+MODEL:
+  TYPE: 'RegressFlowB'
+  PRETRAINED:  './checkpoints/hand_res18_1.pth'
+  TRY_LOAD: ''
+  NUM_FC_FILTERS:
+  - -1
+  HIDDEN_LIST: -1
+  NUM_LAYERS: 18
+LOSS:
+  TYPE: 'RLELoss'
+TEST:
+  HEATMAP2COORD: 'coord'
+TRAIN:
+  WORLD_SIZE: 2
+  BATCH_SIZE: 16
+  BEGIN_EPOCH: 0
+  END_EPOCH: 2000
+  OPTIMIZER: 'adam'
+  LR: 0.0002
+  LR_FACTOR: 0.3
+  LR_STEP:
+  - 400
+  - 800
+  - 1200
+  - 1600

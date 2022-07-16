@@ -186,6 +186,37 @@ def flip_heatmap(heatmap, joint_pairs, shift=False):
     return out
 
 
+def flip_joints_wo_pair(joints_3d, width):
+    """Flip 3d joints.
+
+    Parameters
+    ----------
+    joints_3d : numpy.ndarray
+        Joints in shape (num_joints, 3, 2)
+    width : int
+        Image width.
+    joint_pairs : list
+        List of joint pairs.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flipped 3d joints with shape (num_joints, 3, 2)
+
+    """
+    joints = joints_3d.copy()
+    # flip horizontally
+    joints[:, 0, 0] = width - joints[:, 0, 0] - 1
+    # change left-right parts
+    # for pair in joint_pairs:
+    #     joints[pair[0], :, 0], joints[pair[1], :, 0] = \
+    #         joints[pair[1], :, 0], joints[pair[0], :, 0].copy()
+    #     joints[pair[0], :, 1], joints[pair[1], :, 1] = \
+    #         joints[pair[1], :, 1], joints[pair[0], :, 1].copy()
+
+    joints[:, :, 0] *= joints[:, :, 1]
+    return joints
+
 def flip_joints_3d(joints_3d, width, joint_pairs):
     """Flip 3d joints.
 
@@ -296,6 +327,37 @@ def heatmap_to_coord_simple(hms, bbox, **kwargs):
 
     return preds[None, :, :], maxvals[None, :, :]
 
+def heatmap_to_coord_medicale(hms, **kwargs):
+    if not isinstance(hms, np.ndarray):
+        hms = hms.cpu().data.numpy()
+    coords, maxvals = get_max_pred(hms)
+
+    hm_h = hms.shape[1]
+    hm_w = hms.shape[2]
+
+    # post-processing
+    for p in range(coords.shape[0]):
+        hm = hms[p]
+        px = int(round(float(coords[p][0])))
+        py = int(round(float(coords[p][1])))
+        if 1 < px < hm_w - 1 and 1 < py < hm_h - 1:
+            diff = np.array((hm[py][px + 1] - hm[py][px - 1],
+                             hm[py + 1][px] - hm[py - 1][px]))
+            coords[p] += np.sign(diff) * .25
+
+    preds = np.zeros_like(coords)
+
+    # transform scale
+    w = hm_w * 4
+    h = hm_h * 4
+    center = np.array([w * 0.5, h * 0.5])
+    scale = np.array([w, h])
+    # Transform back
+    for i in range(coords.shape[0]):
+        preds[i] = transform_preds(coords[i], center, scale,
+                                   [hm_w, hm_h])
+
+    return preds[None, :, :], maxvals[None, :, :]
 
 def heatmap_to_coord_scoliosis(pred_jts, pred_scores, hm_shape, output_3d=False):
     hm_height, hm_width = hm_shape
@@ -531,8 +593,8 @@ class get_coord_scoliosis(object):
             return heatmap_to_coord_scoliosis(pred_jts, pred_scores, self.norm_size, self.output_3d)
         elif self.type == 'heatmap':
             pred_hms = output.heatmap[idx]
-            print('need to correct')
-            return 0
+            # print('need to correct')
+            return heatmap_to_coord_medicale(pred_hms)
         else:
             raise NotImplementedError
 

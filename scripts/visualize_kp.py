@@ -67,12 +67,7 @@ if __name__ == "__main__":
         # scale_beta = np.array([kpt_w_beta, kpt_h_beta])
         # center_beta = np.array([kpt_w_beta * 0.5, kpt_h_beta * 0.5])
         for j in range(kpt_num):
-            # img = cv2.circle(img, (int((kpt_coord[j * 3 + 1]) * img_size[0] / img_kpt_size[1]), int(kpt_coord[j *
-            # 3] * img_size[1] / img_kpt_size[0])), radius=3, color=[0, 0, 255], thickness=3) coord_draw_beta =
-            # transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]), center_beta, scale_beta,
-            # [kpt_w, kpt_h]) coord_draw = transform_preds(coord_draw_beta, center, scale, [kpt_w_beta, kpt_h_beta])
-            # coord_draw_beta = transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]),
-            # center_beta, scale_beta, [kpt_w, kpt_h])
+
             coord_draw = transform_preds(np.array([int(kpt_coord[j * 3]), int(kpt_coord[j * 3 + 1])]), center, scale,
                                          [kpt_w, kpt_h])
             # print(coord_draw)

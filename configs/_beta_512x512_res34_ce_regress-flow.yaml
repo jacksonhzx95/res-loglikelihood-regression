@@ -2,38 +2,38 @@ DATASET:
   TRAIN:
     TYPE: 'CE_X_ray'
     ROOT:  '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
-    IMG_PREFIX: 'RawImage/TrainingData'
+    IMG_PREFIX: 'RawImage/TestAll'
     ANN: '400_senior'
     AUG:
       FLIP: false
       SHIFT_FACTOR:
-        - 0.0
-        - 0.0
-      ROT_FACTOR: 0
-      SCALE_FACTOR: 0.0
+        - 0.1
+        - 0.1
+      ROT_FACTOR: 20
+      SCALE_FACTOR: 0.2
       NUM_JOINTS_HALF_BODY: 0
       PROB_HALF_BODY: 0
   VAL:
     TYPE: 'CE_X_ray'
     ROOT:  '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
-    IMG_PREFIX: 'RawImage/TestAll'
+    IMG_PREFIX: 'RawImage/TrainingData'
     ANN: '400_senior'
   TEST:
     TYPE: 'CE_X_ray'
     ROOT:  '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
-    IMG_PREFIX: 'RawImage/TestAll'
+    IMG_PREFIX: 'RawImage/TrainingData'
     ANN: '400_senior'
     DET_FILE: './exp/json/test_det_rcnn.json'
 DATA_PRESET:
   TYPE: 'cephalograms'
-  SIGMA: 3
+  SIGMA: 2
   NUM_JOINTS: 19
   IMAGE_SIZE:
-  - 512
-  - 512
+  - 1024
+  - 1024
   HEATMAP_SIZE:
-  - 128
-  - 128
+  - 256
+  - 256
 MODEL:
   TYPE: 'RegressFlow'
   PRETRAINED:  ''
@@ -41,7 +41,7 @@ MODEL:
   NUM_FC_FILTERS:
   - -1
   HIDDEN_LIST: -1
-  NUM_LAYERS: 50
+  NUM_LAYERS: 34
 LOSS:
   TYPE: 'RLELoss'
 TEST:
@@ -50,12 +50,14 @@ TRAIN:
   WORLD_SIZE: 2
   BATCH_SIZE: 4
   BEGIN_EPOCH: 0
-  END_EPOCH: 2000
+  END_EPOCH: 800
   OPTIMIZER: 'adam'
   LR: 0.001
   LR_FACTOR: 0.3
   LR_STEP:
+  - 100
+  - 200
+  - 300
   - 400
-  - 800
-  - 1200
-  - 1600
+  - 500
+  - 600

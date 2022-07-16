@@ -221,7 +221,7 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
     torch.distributed.barrier()  # Make sure all JSON files are saved
 
     if opt.rank == 0:
-        kpt_json_all = kpt_json
+        kpt_json_all = []
         for r in range(opt.world_size):
             with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{r}.pkl'), 'rb') as fid:
                 kpt_pred = pk.load(fid)

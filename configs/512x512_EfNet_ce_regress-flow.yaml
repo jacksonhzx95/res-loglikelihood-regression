@@ -7,10 +7,10 @@ DATASET:
     AUG:
       FLIP: false
       SHIFT_FACTOR:
-        - 0.0
-        - 0.0
-      ROT_FACTOR: 0
-      SCALE_FACTOR: 0.0
+        - 0.05
+        - 0.1
+      ROT_FACTOR: 5
+      SCALE_FACTOR: 0.3
       NUM_JOINTS_HALF_BODY: 0
       PROB_HALF_BODY: 0
   VAL:
@@ -26,7 +26,7 @@ DATASET:
     DET_FILE: './exp/json/test_det_rcnn.json'
 DATA_PRESET:
   TYPE: 'cephalograms'
-  SIGMA: 3
+  SIGMA: 2
   NUM_JOINTS: 19
   IMAGE_SIZE:
   - 512
@@ -35,13 +35,12 @@ DATA_PRESET:
   - 128
   - 128
 MODEL:
-  TYPE: 'RegressFlow'
-  PRETRAINED:  ''
+  TYPE: 'RegressFlow_EFNetv2'
+  PRETRAINED:  './checkpoints/final.pth'
   TRY_LOAD: ''
   NUM_FC_FILTERS:
   - -1
   HIDDEN_LIST: -1
-  NUM_LAYERS: 50
 LOSS:
   TYPE: 'RLELoss'
 TEST:
@@ -52,10 +51,9 @@ TRAIN:
   BEGIN_EPOCH: 0
   END_EPOCH: 2000
   OPTIMIZER: 'adam'
-  LR: 0.001
-  LR_FACTOR: 0.3
+  LR: 0.0001
+  LR_FACTOR: 0.5
   LR_STEP:
-  - 400
-  - 800
-  - 1200
+  - 600
+  - 1000
   - 1600

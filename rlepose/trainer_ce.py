@@ -11,7 +11,8 @@ from rlepose.models import builder
 from rlepose.utils.metrics import DataLogger, calc_accuracy, calc_coord_accuracy, evaluate_mAP
 from rlepose.utils.nms import oks_pose_nms
 from rlepose.utils.transforms import flip, flip_output
-from rlepose.utils.metric_mape import cal_deo
+from rlepose.utils.metric_mape import cal_deo, cal_deo_hand
+
 
 def clip_gradient(optimizer, max_norm, norm_type):
     """
@@ -87,7 +88,8 @@ def train(opt, cfg, train_loader, m, criterion, optimizer):
 
 
 def validate(m, opt, cfg, heatmap_to_coord, batch_size=20, use_nms=False):
-    det_dataset = builder.build_dataset(cfg.DATASET.TEST, preset_cfg=cfg.DATA_PRESET, train=False, opt=opt, heatmap2coord=cfg.TEST.HEATMAP2COORD)
+    det_dataset = builder.build_dataset(cfg.DATASET.TEST, preset_cfg=cfg.DATA_PRESET, train=False, opt=opt,
+                                        heatmap2coord=cfg.TEST.HEATMAP2COORD)
     det_dataset_sampler = torch.utils.data.distributed.DistributedSampler(
         det_dataset, num_replicas=opt.world_size, rank=opt.rank)
     det_loader = torch.utils.data.DataLoader(
@@ -162,8 +164,8 @@ def validate(m, opt, cfg, heatmap_to_coord, batch_size=20, use_nms=False):
 
 
 def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
-
-    gt_val_dataset = builder.build_dataset(cfg.DATASET.VAL, preset_cfg=cfg.DATA_PRESET, train=False, heatmap2coord=cfg.TEST.HEATMAP2COORD)
+    gt_val_dataset = builder.build_dataset(cfg.DATASET.VAL, preset_cfg=cfg.DATA_PRESET, train=False,
+                                           heatmap2coord=cfg.TEST.HEATMAP2COORD)
     gt_val_sampler = torch.utils.data.distributed.DistributedSampler(
         gt_val_dataset, num_replicas=opt.world_size, rank=opt.rank)
     gt_val_loader = torch.utils.data.DataLoader(
@@ -195,17 +197,18 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
                     continue
                 if output[k] is not None:
                     output[k] = (output[k] + output_flipped[k]) / 2
-        acc_val = calc_coord_accuracy(output, labels, hm_shape, output_3d=output_3d)
-        acc_val_sum += acc_val
+
+        # acc_val = calc_coord_accuracy(output, labels, hm_shape, output_3d=output_3d)
+        # acc_val_sum += acc_val
+        # val_count += 1
         for i in range(inps.shape[0]):
             # bbox = bboxes[i].tolist()
             pose_coords, pose_scores = heatmap_to_coord(
                 output, idx=i)
-            # acc = calc_coord_accuracy()
+
             keypoints = np.concatenate((pose_coords[0], pose_scores[0]), axis=1)
             keypoints = keypoints.reshape(-1).tolist()
 
-            val_count += 1
             data = dict()
             data['image_id'] = str(img_ids[i])
             data['score'] = float(np.mean(pose_scores) + np.max(pose_scores))
@@ -215,7 +218,7 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
 
     with open(os.path.join(opt.work_dir, f'test_gt_kpt_rank_{opt.rank}.pkl'), 'wb') as fid:
         pk.dump(kpt_json, fid, pk.HIGHEST_PROTOCOL)
-    acc_val_avg = acc_val_sum/val_count
+    # acc_val_avg = acc_val_sum / val_count
     torch.distributed.barrier()  # Make sure all JSON files are saved
 
     if opt.rank == 0:
@@ -229,15 +232,17 @@ def validate_gt(m, opt, cfg, heatmap_to_coord, batch_size=20):
 
         with open(os.path.join(opt.work_dir, 'test_gt_kpt.json'), 'w') as fid:
             json.dump(kpt_json_all, fid)
-        overview = cal_deo(kpt_json_all, cfg.DATA_PRESET.get('IMAGE_SIZE'))
+        # overview, pe_mean = cal_deo_hand(kpt_json_all, cfg.DATA_PRESET.get('IMAGE_SIZE'))
+        overview, pe_mean = cal_deo(kpt_json_all, cfg.DATA_PRESET.get('IMAGE_SIZE'))
 
-        return acc_val_avg, overview  # res['AP']
+        return overview, pe_mean  # res['AP']
     else:
         return 0, 0
 
 
 def validate_gt_3d(m, opt, cfg, heatmap_to_coord, batch_size=20):
-    gt_val_dataset = builder.build_dataset(cfg.DATASET.VAL, preset_cfg=cfg.DATA_PRESET, train=False, heatmap2coord=cfg.TEST.HEATMAP2COORD)
+    gt_val_dataset = builder.build_dataset(cfg.DATASET.VAL, preset_cfg=cfg.DATA_PRESET, train=False,
+                                           heatmap2coord=cfg.TEST.HEATMAP2COORD)
     gt_val_sampler = torch.utils.data.distributed.DistributedSampler(
         gt_val_dataset, num_replicas=opt.world_size, rank=opt.rank)
 

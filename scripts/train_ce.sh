@@ -2,7 +2,7 @@ set -x
 
 CONFIG=$1
 EXPID=${2:-"test_rle"}
-PORT=${3:-23456}
+PORT=${3:-23333}
 
 HOST=$(hostname -i)
 
@@ -11,4 +11,4 @@ python ./scripts/train_ce.py \
     --launcher pytorch --rank 0 \
     --dist-url tcp://${HOST}:${PORT} \
     --exp-id ${EXPID} \
-    --cfg ${CONFIG} --seed 123123
+    --cfg ${CONFIG} --seed 2333

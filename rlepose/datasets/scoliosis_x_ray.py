@@ -123,6 +123,7 @@ class Scoliosis_X_ray(data.Dataset):
         if 'AUG' in cfg.keys():
             self._scale_factor = cfg['AUG']['SCALE_FACTOR']
             self._rot = cfg['AUG']['ROT_FACTOR']
+            self.flip = cfg['AUG']['Flip']
             self._shift = cfg['AUG']['SHIFT_FACTOR']
             self.num_joints_half_body = cfg['AUG']['NUM_JOINTS_HALF_BODY']
             self.prob_half_body = cfg['AUG']['PROB_HALF_BODY']
@@ -132,6 +133,7 @@ class Scoliosis_X_ray(data.Dataset):
             self.num_joints_half_body = -1
             self.prob_half_body = -1
             self._shift = (0, 0)
+            self.flip = False
 
         self._input_size = self._preset_cfg['IMAGE_SIZE']
         self._output_size = self._preset_cfg['HEATMAP_SIZE']
@@ -164,6 +166,7 @@ class Scoliosis_X_ray(data.Dataset):
                 self, scale_factor=self._scale_factor,
                 input_size=self._input_size,
                 output_size=self._output_size,
+                flip=self.flip,
                 rot=self._rot, sigma=self._sigma,
                 train=self._train, loss_type=self._loss_type, shift=self._shift)
         else:

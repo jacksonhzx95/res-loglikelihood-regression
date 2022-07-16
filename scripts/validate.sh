@@ -2,7 +2,7 @@ set -x
 
 CONFIG=$1
 CKPT=$2
-PORT=${3:-23456}
+PORT=${4:2145}
 
 HOST=$(hostname -i)
 

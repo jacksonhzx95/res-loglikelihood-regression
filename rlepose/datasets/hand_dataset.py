@@ -1,4 +1,5 @@
 import os
+import csv
 import torch.utils.data as data
 import yaml
 from easydict import EasyDict as edict
@@ -35,6 +36,28 @@ def rearrange_pts(pts):
         boxes.append(br)
     return np.asarray(boxes, np.float32)
 
+def load_csv(file_name, num_landmarks, dim):
+    landmarks_dict = {}
+    with open(file_name, 'r') as file:
+        reader = csv.reader(file)
+        for row in reader:
+            id = row[0]
+            landmarks = []
+            num_entries = dim * num_landmarks + 1
+            assert num_entries == len(row), 'number of row entries ({}) and landmark coordinates ({}) do not match'.format(num_entries, len(row))
+            # print(len(points_dict), name)
+            for i in range(1, dim * num_landmarks + 1, dim):
+                # print(i)
+                if dim == 2:
+                    coords = np.array([float(row[i]), float(row[i + 1])], np.float32)
+                elif dim == 3:
+                    coords = np.array([float(row[i]), float(row[i + 1]), float(row[i + 2])], np.float32)
+                    # landmark = Landmark(coords)
+                landmarks.append(coords)
+            landmarks = np.array(landmarks)
+            landmarks_dict[id] = landmarks
+    return landmarks_dict
+
 
 def load_gt_pts(annopath):
     pts = loadmat(annopath)['p2']  # num x 2 (x,y)
@@ -64,20 +87,29 @@ def scoliosis_pts_process(pts):
 
 
 @DATASET.register_module
-class CE_X_ray(data.Dataset):
-    CLASSES = ['CE']
+class Hand_X_ray(data.Dataset):
+    CLASSES = ['Hand']
     EVAL_JOINTS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
-                   10, 11, 12, 13, 14, 15, 16, 17, 18]
+                   10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                   20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                   30, 31, 32, 33, 34, 35, 36]
     num_joints = 19
     joint_pairs = [[0, 0], [2, 2], [4, 4], [6, 6], [8, 8],
-                   [10, 10], [12, 12], [14, 14], [16, 16], [18, 18]
+                   [10, 10], [12, 12], [14, 14], [16, 16], [18, 18],
+                   [20, 20], [22, 22], [24, 24], [26, 26], [28, 28],
+                   [30, 30], [32, 32], [34, 34], [36, 36]
                    ]
     joints_name = (
         'T1_LU', 'T1_RU', 'T1_LD', 'T1_RD',
         'T2_LU', 'T2_RU', 'T2_LD', 'T2_RD',
         'T3_LU', 'T3_RU', 'T3_LD', 'T3_RD',
         'T4_LU', 'T4_RU', 'T4_LD', 'T4_RD',
-        'T5_LU', 'T5_RU', 'T5_LD',
+        'T5_LU', 'T5_RU', 'T5_LD', 'T1_LU',
+        'T1_RU', 'T1_LD', 'T1_RD',
+        'T2_LU', 'T2_RU', 'T2_LD', 'T2_RD',
+        'T3_LU', 'T3_RU', 'T3_LD', 'T3_RD',
+        'T4_LU', 'T4_RU', 'T4_LD', 'T4_RD',
+        'T5_LU', 'T5_RU',
     )
 
     def __init__(self,
@@ -89,14 +121,15 @@ class CE_X_ray(data.Dataset):
         # cfg = cfg['cfg']['DATASET']['TRAIN']
         self._root = cfg['ROOT']
         self._img_prefix = cfg['IMG_PREFIX']
-        self._ann_file = os.path.join(self._root, cfg['ANN'][0])
-        self._ann_file2 = os.path.join(self._root, cfg['ANN'][1])
+        self._ann_file = os.path.join(self._root, cfg['ANN'])
         self._preset_cfg = cfg['PRESET']
+        # self.ann_file =
         self._lazy_import = lazy_import
         self._skip_empty = skip_empty
         self._train = train
-        self.img_dir = os.path.join(self._root, self._img_prefix)
 
+        self.img_dir = os.path.join(self._root, self._img_prefix)
+        self.landmarks_dict = load_csv(self._ann_file, self._preset_cfg['NUM_JOINTS'], dim=2)
         if 'AUG' in cfg.keys():
             self._flip = cfg['AUG']['FLIP']
             self._scale_factor = cfg['AUG']['SCALE_FACTOR']
@@ -112,18 +145,25 @@ class CE_X_ray(data.Dataset):
             self.prob_half_body = -1
             self._shift = (0, 0)
 
+        # get image index from the split file
+        # self.img_ids = []
+        self.split_file = os.path.join(self._root, cfg['SPLIT'])
+        self.img_ids = self.get_img_ids(self.split_file)
+
         self._input_size = self._preset_cfg['IMAGE_SIZE']
         self._output_size = self._preset_cfg['HEATMAP_SIZE']
-
         self._sigma = self._preset_cfg['SIGMA']
 
         self._check_centers = False
+
 
         self.num_class = len(self.CLASSES)
         # self._loss_type = None
         self.upper_body_ids = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
                                10, 11, 12,)
-        self.lower_body_ids = (13, 14, 15, 16, 17, 18,)
+        self.lower_body_ids = (13, 14, 15, 16, 17, 18,19,
+                   20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                   30, 31, 32, 33, 34, 35, 36)
         self._loss_type = cfg['heatmap2coord']
         if self._preset_cfg['TYPE'] == 'simple':
             self.transformation = SimpleTransform(
@@ -140,7 +180,7 @@ class CE_X_ray(data.Dataset):
                 flip=self._flip,
                 rot=self._rot, sigma=self._sigma,
                 train=self._train, loss_type=self._loss_type, shift=self._shift)
-        elif self._preset_cfg['TYPE'] == 'cephalograms':
+        elif self._preset_cfg['TYPE'] in ['cephalograms', 'hand']:
             self.transformation = CETransform(
                 self, scale_factor=self._scale_factor,
                 input_size=self._input_size,
@@ -151,7 +191,7 @@ class CE_X_ray(data.Dataset):
         else:
             raise NotImplementedError
 
-        self.img_ids = sorted(os.listdir(self.img_dir))
+
 
     '''
     def __init__(self, data_dir, phase, input_h=None, input_w=None, down_ratio=4):
@@ -168,33 +208,21 @@ class CE_X_ray(data.Dataset):
     '''
 
     def load_image(self, index):
-        image = cv2.imread(os.path.join(self.img_dir, self.img_ids[index]))
+        image = cv2.imread(os.path.join(self.img_dir, self.img_ids[index] + '.jpg'))
         return image
 
-    def load_annoFolder(self, img_id):
-        return os.path.join(self._ann_file, img_id[:-4] + '.txt'), os.path.join(self._ann_file2, img_id[:-4] + '.txt')
+    def get_img_ids(self, split):
+        img_ids = []
+        with open(split) as f:
+            for line in f:
+                img_name = line.strip()
+                img_ids.append(img_name)
+        return img_ids
 
     def load_annotation(self, index):
 
         img_id = self.img_ids[index]
-        annoFolder1, annoFolder2 = self.load_annoFolder(img_id)
-        pts1 = []
-        pts2 = []
-        with open(annoFolder1, 'r') as f:
-            lines = f.readlines()
-            for i in range(self.num_joints):
-                coordinates = lines[i].replace('\n', '').split(',')
-                coordinates_int = [int(i) for i in coordinates]
-                pts1.append(coordinates_int)
-        with open(annoFolder2, 'r') as f:
-            lines = f.readlines()
-            for i in range(self.num_joints):
-                coordinates = lines[i].replace('\n', '').split(',')
-                coordinates_int = [int(i) for i in coordinates]
-                pts2.append(coordinates_int)
-        pts1 = np.array(pts1)
-        pts2 = np.array(pts2)
-        pts = (pts1 + pts2) / 2
+        pts = self.landmarks_dict[img_id]
         pts_3d = scoliosis_pts_process(pts)
         return pts_3d
 

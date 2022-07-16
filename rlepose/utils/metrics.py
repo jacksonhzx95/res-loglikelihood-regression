@@ -224,9 +224,9 @@ def calc_coord_accuracy(output, target, hm_shape, output_3d=False, num_joints=No
     labels = labels * label_masks
 
     if output_3d:
-        norm = np.ones((coords.shape[0], 3)) * np.array([hm_width, hm_height, hm_depth]) / 10
+        norm = np.ones((coords.shape[0], 3)) * np.array([hm_width, hm_height, hm_depth]) / 40
     else:
-        norm = np.ones((coords.shape[0], 2)) * np.array([hm_width, hm_height]) / 10
+        norm = np.ones((coords.shape[0], 2)) * np.array([hm_width, hm_height]) / 40
 
     dists = calc_dist(coords, labels, norm)
 

@@ -36,7 +36,7 @@ MODEL:
   PRETRAINED: ''
   TRY_LOAD: ''
   NUM_FC_FILTERS:
-  - -1
+  - [512, 512]
   HIDDEN_LIST: -1
   NUM_LAYERS: 50
 LOSS:

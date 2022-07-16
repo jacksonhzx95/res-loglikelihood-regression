@@ -7,10 +7,12 @@ from easydict import EasyDict
 from .builder import SPPE
 from .layers.real_nvp import RealNVP
 from .layers.Resnet import ResNet
+from .layers.FPN_neck import FPN_neck, FPN_neck_v2
 
 
 def nets():
-    return nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(), nn.Linear(64, 64), nn.LeakyReLU(), nn.Linear(64, 2), nn.Tanh())
+    return nn.Sequential(nn.Linear(2, 64), nn.LeakyReLU(), nn.Linear(64, 64), nn.LeakyReLU(), nn.Linear(64, 2),
+                         nn.Tanh())
 
 
 def nett():
@@ -38,9 +40,9 @@ class Linear(nn.Module):
 
 
 @SPPE.register_module
-class Regress(nn.Module):
+class RegressFlowB_v2(nn.Module):
     def __init__(self, norm_layer=nn.BatchNorm2d, **cfg):
-        super(Regress, self).__init__()
+        super(RegressFlowB_v2, self).__init__()
         self._preset_cfg = cfg['PRESET']
         self.fc_dim = cfg['NUM_FC_FILTERS']
         self._norm_layer = norm_layer
@@ -62,6 +64,15 @@ class Regress(nn.Module):
             101: 2048,
             152: 2048
         }[cfg['NUM_LAYERS']]
+
+        self.decoder_feature_channel = {
+            18: [64, 128, 256, 512],
+            34: [64, 128, 256, 512],
+            50: [256, 512, 1024, 2048],
+            101: [256, 512, 1024, 2048],
+            152: [256, 512, 1024, 2048],
+        }[cfg['NUM_LAYERS']]
+
         self.hidden_list = cfg['HIDDEN_LIST']
 
         model_state = self.preact.state_dict()
@@ -69,20 +80,44 @@ class Regress(nn.Module):
                  if k in self.preact.state_dict() and v.size() == self.preact.state_dict()[k].size()}
         model_state.update(state)
         self.preact.load_state_dict(model_state)
-
-        self.avg_pool = nn.AdaptiveAvgPool2d(1)
-
+        # self.dropout = nn.Dropout(p=0.05)
         self.fcs, out_channel = self._make_fc_layer()
-        self.fc_coord = Linear(out_channel, self.num_joints * 2, norm=False)
-        # self.fc_layers = [Linear(out_channel, self.num_joints * 2)]
-        # self.fc_sigma = Linear(out_channel, self.num_joints * 2, norm=False)
+        self.neck = FPN_neck_v2(
+            in_channels=self.decoder_feature_channel,
+            out_channels=self.decoder_feature_channel[0],
+            num_outs=4,
+            downsample_strides=[8, 4, 2, 1]
+        )
+        self.neck_out = nn.Sequential(
+            nn.Conv2d(in_channels=self.decoder_feature_channel[0],
+                      out_channels=int(self.decoder_feature_channel[0] / 2),
+                      kernel_size=3,
+                      stride=2,
+                      padding=1),
+            nn.BatchNorm2d(int(self.decoder_feature_channel[0] / 2)),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=int(self.decoder_feature_channel[0] / 2),
+                      out_channels=int(self.decoder_feature_channel[0] / 8),
+                      kernel_size=3,
+                      stride=2,
+                      padding=1),
+            nn.BatchNorm2d(int(self.decoder_feature_channel[0] / 8)),
+            nn.ReLU(),
+        )
+        self.flatten = nn.Flatten()
+        self.avg_pool = nn.AdaptiveAvgPool2d(8)
 
-        self.fc_layers = [self.fc_coord]
 
-        # prior = distributions.MultivariateNormal(torch.zeros(2), torch.eye(2))
-        # masks = torch.from_numpy(np.array([[0, 1], [1, 0]] * 3).astype(np.float32))
 
-        # self.flow = RealNVP(nets, nett, masks, prior)
+        self.fc_coord = Linear(out_channel, self.num_joints * 2)
+        self.fc_sigma = Linear(out_channel, self.num_joints * 2, norm=False)
+
+        self.fc_layers = [self.fc_coord, self.fc_sigma]
+
+        prior = distributions.MultivariateNormal(torch.zeros(2), torch.eye(2))
+        masks = torch.from_numpy(np.array([[0, 1], [1, 0]] * 3).astype(np.float32))
+
+        self.flow = RealNVP(nets, nett, masks, prior)
 
     def _make_fc_layer(self):
         fc_layers = []
@@ -112,43 +147,39 @@ class Regress(nn.Module):
     def forward(self, x, labels=None):
         BATCH_SIZE = x.shape[0]
 
-        feat = self.preact(x)
-
-        _, _, f_h, f_w = feat.shape
+        feats = self.preact.forward_feat(x)
+        feat = self.neck(feats)
+        feat = self.neck_out(feat)
+        # feat = self.flatten(feat)
+        # _, _, f_h, f_w = feat.shape
         feat = self.avg_pool(feat).reshape(BATCH_SIZE, -1)
-
+        # feat = self.dropout(feat)
         out_coord = self.fc_coord(feat).reshape(BATCH_SIZE, self.num_joints, 2)
         assert out_coord.shape[2] == 2
 
-        # out_sigma = self.fc_sigma(feat).reshape(BATCH_SIZE, self.num_joints, -1)
+        out_sigma = self.fc_sigma(feat).reshape(BATCH_SIZE, self.num_joints, -1)
 
         # (B, N, 2)
         pred_jts = out_coord.reshape(BATCH_SIZE, self.num_joints, 2)
 
-        # sigma = out_sigma.reshape(BATCH_SIZE, self.num_joints, -1).sigmoid()
-        scores = 1 - pred_jts
+        sigma = out_sigma.reshape(BATCH_SIZE, self.num_joints, -1).sigmoid()
+        scores = 1 - sigma
 
         scores = torch.mean(scores, dim=2, keepdim=True)
-        # make the normalizing flow block disable
 
         if self.training and labels is not None:
-            nf_loss = 0
-        else:
-            nf_loss = None
-
-        '''if self.training and labels is not None:
             gt_uv = labels['target_uv'].reshape(pred_jts.shape)
             bar_mu = (pred_jts - gt_uv) / sigma
             # (B, K, 2)
             log_phi = self.flow.log_prob(bar_mu.reshape(-1, 2)).reshape(BATCH_SIZE, self.num_joints, 1)
             nf_loss = torch.log(sigma) - log_phi
         else:
-            nf_loss = None'''
+            nf_loss = None
 
         output = EasyDict(
             pred_jts=pred_jts,
-            # sigma=sigma,
+            sigma=sigma,
             maxvals=scores.float(),
-            # nf_loss=nf_loss
+            nf_loss=nf_loss
         )
         return output

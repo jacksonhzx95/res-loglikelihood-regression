@@ -19,7 +19,7 @@ parser.add_argument('--exp-id', default='default', type=str,
 "----------------------------- General options -----------------------------"
 parser.add_argument('--nThreads', default=8, type=int,
                     help='Number of data loading threads')
-parser.add_argument('--snapshot', default=200, type=int,
+parser.add_argument('--snapshot', default=10, type=int,
                     help='How often to take a snapshot of the model (0 = never)')
 
 parser.add_argument('--rank', default=-1, type=int,
@@ -32,7 +32,7 @@ parser.add_argument('--launcher', choices=['none', 'pytorch', 'slurm', 'mpi'], d
                     help='job launcher')
 
 "----------------------------- Training options -----------------------------"
-parser.add_argument('--seed', default=123123, type=int,
+parser.add_argument('--seed', default=2333, type=int,
                     help='random seed')
 
 "----------------------------- Log options -----------------------------"
