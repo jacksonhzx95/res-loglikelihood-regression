@@ -84,10 +84,63 @@ def main_worker(gpu, opt, cfg):
 
     criterion = builder.build_loss(cfg.LOSS).cuda()
 
+    '''
+    freeze the gen network 
+    '''
+    # for param in model.backbone.parameters():
+    #     param.requires_grad = False
+    # for param in model.neck.parameters():
+    #     param.requires_grad = False
+    # for param in model.decode_head.parameters():
+    #     param.requires_grad = False
+    # if args.load_from is not None:
+    #     cfg.load_from = args.load_from
+    #     checkpoint = torch.load(args.load_from)
+    #     model.load_state_dict(checkpoint)
+
+    for params in m.module.parameters():
+        params.requires_grad = False
+
+    m.train(False)
+    reg_params = []
+    print(m)
+    for params in m.module.neck_out.parameters():
+        params.requires_grad = True
+        reg_params += [params]
+
+    for params in m.module.fc_coord.parameters():
+        params.requires_grad = True
+        reg_params += [params]
+    for params in m.module.fc_sigma.parameters():
+        params.requires_grad = True
+        reg_params += [params]
+    for params in m.module.flow.parameters():
+        params.requires_grad = True
+        reg_params += [params]
+    # for params in model.feature_selection.parameters():
+    #     params.requires_grad = True
+    #     seg_params += [params]
+
+    # freeze seg network
+
+    # for params in model.parameters():
+    #     params.requires_grad = False
+    # gen_params = []
+    # for params in model.backbone_gan.parameters():
+    #     params.requires_grad = True
+    #     gen_params += [params]
+    # for params in model.G_head.parameters():
+    #     params.requires_grad = True
+    #     gen_params += [params]
+    # for params in model.feature_selection.parameters():
+    #     params.requires_grad = True
+    #     gen_params += [params]
+
+
     if cfg.TRAIN.OPTIMIZER == 'adam':
-        optimizer = torch.optim.Adam(m.parameters(), lr=cfg.TRAIN.LR, weight_decay=0.0005)
+        optimizer = torch.optim.Adam(reg_params, lr=cfg.TRAIN.LR, weight_decay=0.0005)
     elif cfg.TRAIN.OPTIMIZER == 'sgd':
-        optimizer = torch.optim.SGD(m.parameters(), lr=cfg.TRAIN.LR, momentum=0.95, weight_decay=0.0001)
+        optimizer = torch.optim.SGD(reg_params, lr=cfg.TRAIN.LR, momentum=0.9, weight_decay=0.0005)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.998)
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR()
     # lr_scheduler_warm = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1, end_factor=1.0, total_iters=40)
@@ -111,7 +164,7 @@ def main_worker(gpu, opt, cfg):
     heatmap_to_coord = get_coord_scoliosis(cfg, cfg.DATA_PRESET.HEATMAP_SIZE, output_3d)
 
     opt.trainIters = 0
-    best_mean = 2
+    best_mean = 5
     best_err = 999
     for i in range(cfg.TRAIN.BEGIN_EPOCH, cfg.TRAIN.END_EPOCH):
         opt.epoch = i

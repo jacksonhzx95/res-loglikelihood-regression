@@ -111,7 +111,7 @@ def main_worker(gpu, opt, cfg):
     heatmap_to_coord = get_coord_scoliosis(cfg, cfg.DATA_PRESET.HEATMAP_SIZE, output_3d)
 
     opt.trainIters = 0
-    best_mean = 2
+    best_mean = 5
     best_err = 999
     for i in range(cfg.TRAIN.BEGIN_EPOCH, cfg.TRAIN.END_EPOCH):
         opt.epoch = i

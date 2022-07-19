@@ -65,7 +65,7 @@ def cal_deo(kpt_json, img_size):
     kpt_num = 19
     original_image_extend = [193.5, 240]
     image_size_in = [kpt_w, kpt_h]
-    spacing = [float(np.max([es / s for es, s in zip(original_image_extend, image_size_in)])) * 1.25] * 2
+    spacing = [float(np.max([es / (s/1.25) for es, s in zip(original_image_extend, image_size_in)])) ] * 2
     pr_cobb_angles = []
     gt_cobb_angles = []
     landmark_dist = []
