@@ -29,8 +29,8 @@ def rearrange_pts(pts):
 
 
 if __name__ == "__main__":
-    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/ce_regress18_FB_lr_ft-512x512_res18_ce_regress-flowB.yaml'
-    # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/offline_work_place/default'
+    # exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/exp/ce_regress18_FB_lr_ft-512x512_res18_ce_regress-flowB.yaml'
+    exp_path = '/home/jackson/Documents/Project_BME/Python_code/NF/res-loglikelihood-regression/offline_work_place/ce_test'
     kpt_json = os.path.join(exp_path, 'test_gt_kpt.json')
     DATASET_PATH = '/home/jackson/Documents/Project_BME/Datasets/face_landmark/'
     IMG_PREFIX = 'RawImage/TestAll'
@@ -42,9 +42,15 @@ if __name__ == "__main__":
         os.makedirs(save_path)
     kpt_file = open(kpt_json)
     kpt_data = json.load(kpt_file)
-    kpt_w, kpt_h = (512, 512)
+    kpt_w, kpt_h = (256, 256)
     kpt_num = 19
+    fontScale = 0.5
 
+    # Blue color in BGR
+    color = (255, 0, 0)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    # Line thickness of 2 px
+    thickness = 2
     for i in range(len(kpt_data)):
         img_name = kpt_data[i]['image_id']
         kpt_coord = kpt_data[i]['keypoints']
@@ -60,6 +66,7 @@ if __name__ == "__main__":
         # read img
         img = cv2.imread(os.path.join(data_path, img_name), cv2.IMREAD_COLOR)
         img_size = img.shape  # (H, W, C)
+
         # print(img[:, :, 0].max())
         img_h, img_w = img_size[:2]
         _aspect_ratio = kpt_w / kpt_h
@@ -83,6 +90,10 @@ if __name__ == "__main__":
                                    int(gt_kpts[1])),
                              radius=2, color=[0, 255, 0], thickness=2)
             img = cv2.circle(img, (int(coord_draw[0]), int(coord_draw[1])),
-                             radius=2, color=[0, 0, 255], thickness=2)
+                             radius=2, color=[0, 255, 255], thickness=2)
+
+            img = cv2.putText(img, f'L {j}', (int(gt_kpts[0]),
+                                   int(gt_kpts[1])), font,
+                                fontScale, color, thickness, cv2.LINE_AA)
 
         cv2.imwrite(os.path.join(save_path, img_name[:-4] + '.png'), img)

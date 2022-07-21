@@ -85,14 +85,14 @@ def main_worker(gpu, opt, cfg):
     criterion = builder.build_loss(cfg.LOSS).cuda()
 
     if cfg.TRAIN.OPTIMIZER == 'adam':
-        optimizer = torch.optim.Adam(m.parameters(), lr=cfg.TRAIN.LR, weight_decay=0.00001)
+        optimizer = torch.optim.Adam(m.parameters(), lr=cfg.TRAIN.LR, weight_decay=0.0005)
     elif cfg.TRAIN.OPTIMIZER == 'sgd':
         optimizer = torch.optim.SGD(m.parameters(), lr=cfg.TRAIN.LR, momentum=0.95, weight_decay=0.0001)
-    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.997)
+    # lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.997)
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR()
     # lr_scheduler_warm = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=0.1, end_factor=1.0, total_iters=40)
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200, eta_min=5e-6)
-
+    lr_scheduler = torch.optim.lr_scheduler.LinearLR(optimizer, start_factor=1, end_factor=0.05, total_iters=1000)
     # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
     #     optimizer, milestones=cfg.TRAIN.LR_STEP, gamma=cfg.TRAIN.LR_FACTOR)
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(

@@ -11,4 +11,4 @@ python ./scripts/train_ce.py \
     --launcher pytorch --rank 0 \
     --dist-url tcp://${HOST}:${PORT} \
     --exp-id ${EXPID} \
-    --cfg ${CONFIG} --seed 2333
+    --cfg ${CONFIG} --seed 9507

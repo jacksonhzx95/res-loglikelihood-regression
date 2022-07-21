@@ -23,7 +23,7 @@ class ConvertImgFloat(object):
 
 
 class RandomContrast(object):
-    def __init__(self, lower=0.5, upper=1.5):
+    def __init__(self, lower=0.8, upper=1.2):
         self.lower = lower
         self.upper = upper
         assert self.upper >= self.lower, "contrast upper must be >= lower."
@@ -37,7 +37,7 @@ class RandomContrast(object):
 
 
 class RandomBrightness(object):
-    def __init__(self, delta=32):
+    def __init__(self, delta=24):
         assert delta >= 0.0
         assert delta <= 255.0
         self.delta = delta
