@@ -7,7 +7,7 @@ from scipy.io import loadmat
 import numpy as np
 from rlepose.models.builder import DATASET
 from rlepose.utils.presets import SimpleTransform, ScoliosisTransform, CETransform
-
+import albumentations as A
 
 def update_config(config_file):
     with open(config_file) as f:
@@ -72,13 +72,13 @@ class CE_X_ray(data.Dataset):
     joint_pairs = [[0, 0], [2, 2], [4, 4], [6, 6], [8, 8],
                    [10, 10], [12, 12], [14, 14], [16, 16], [18, 18]
                    ]
-    joints_name = (
-        'T1_LU', 'T1_RU', 'T1_LD', 'T1_RD',
-        'T2_LU', 'T2_RU', 'T2_LD', 'T2_RD',
-        'T3_LU', 'T3_RU', 'T3_LD', 'T3_RD',
-        'T4_LU', 'T4_RU', 'T4_LD', 'T4_RD',
-        'T5_LU', 'T5_RU', 'T5_LD',
-    )
+    joints_name = [
+        'L0', 'L1', 'L2', 'L3',
+        'L4', 'L5', 'L6', 'L7',
+        'L8', 'L9', 'L10', 'L11',
+        'L12', 'L13', 'L14', 'L15',
+        'L16', 'L17', 'L18'
+    ]
 
     def __init__(self,
                  train=True,
@@ -228,13 +228,16 @@ class CE_X_ray(data.Dataset):
         img_id = self.img_ids[index]
         img = self.load_image(index)
         joints = self.load_annotation(index)
+
         label = dict(joints=joints)
         label['width'] = img.shape[1]
         label['height'] = img.shape[0]
+        # target['label']
 
         target = self.transformation(img, label)
 
         img = target.pop('image')
+
         return img, target, img_id
 
     def __len__(self):

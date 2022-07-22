@@ -51,7 +51,7 @@ class Focal_RLE_Loss(nn.Module):
         super(Focal_RLE_Loss, self).__init__()
         self.size_average = size_average
         self.amp = 1 / math.sqrt(2 * math.pi)
-        self.alpha = 0.25
+        self.alpha = 0.1
         self.gamma = 2
 
     def logQ(self, gt_uv, pred_jts, sigma):

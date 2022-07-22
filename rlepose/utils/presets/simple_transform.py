@@ -8,16 +8,17 @@ from ..bbox import _box_to_center_scale, _center_scale_to_box, get_center_scale
 from ..transforms import (affine_transform, flip_joints_3d, flip_joints_wo_pair,
                           get_affine_transform, im_to_torch)
 
-from ..transform import Compose, ConvertImgFloat, PhotometricDistort
+from ..transform import Compose, ConvertImgFloat, PhotometricDistort, RandomSampleCrop
 
 
 class Preprocessing(object):
     def __init__(self):
         self.data_aug = Compose([ConvertImgFloat(),
+                                 RandomSampleCrop(),
                                  PhotometricDistort()])
 
     def __call__(self, img, pts):
-        img_out, pts = self.data_aug(img.copy(), pts)
+        img_out, pts = self.data_aug(img.copy(), pts.copy())
         return img_out, pts
 
 
@@ -427,6 +428,7 @@ class CETransform(object):
         if self._train:
             src, gt_joints = self.process(src, gt_joints)
         src = np.clip(src, a_min=0., a_max=255.)
+        label['width'], label['height'] = src.shape[1], src.shape[0]
         imgwidth, imght = label['width'], label['height']
         assert imgwidth == src.shape[1] and imght == src.shape[0]
         self.num_joints = gt_joints.shape[0]
@@ -485,9 +487,9 @@ class CETransform(object):
         target_hm, target_hm_weight = self._target_generator(joints.copy(), self.num_joints)
         target_uv, target_uv_weight, target_visible, target_visible_weight = self._integral_target_generator(
             joints.copy(), self.num_joints, inp_h, inp_w)
-        if self._train:
-            img, gt_joints = self.process(img, gt_joints)
-        img = np.clip(img, a_min=0., a_max=255.)
+        # if self._train:
+        #     img, gt_joints = self.process(img, gt_joints)
+        # img = np.clip(img, a_min=0., a_max=255.)
         img = im_to_torch(img)
         img.add_(-0.5)
 
@@ -682,6 +684,7 @@ class CETransform_beta(object):
         if self._train:
             src, gt_joints = self.process(src, gt_joints)
         src = np.clip(src, a_min=0., a_max=255.)
+        label['width'], label['height'] = src.shape[1], src.shape[0]
         imgwidth, imght = label['width'], label['height']
         assert imgwidth == src.shape[1] and imght == src.shape[0]
         self.num_joints = gt_joints.shape[0]

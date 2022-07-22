@@ -21,9 +21,11 @@ class ConvertImgFloat(object):
     def __call__(self, img, pts):
         return img.astype(np.float32), pts.astype(np.float32)
 
+
 class _ConvertImgFloat(object):
     def __call__(self, img, pts):
         return img.astype(np.float32), pts.astype(np.float32)
+
 
 class RandomContrast(object):
     def __init__(self, lower=0.5, upper=1.5):
@@ -116,18 +118,19 @@ class Expand(object):
 
 
 class RandomSampleCrop(object):
-    def __init__(self, ratio=(0.5, 1.5), min_win=0.9):
-        self.sample_options = (
-            # using entire original input image
-            None,
-            # sample a patch s.t. MIN jaccard w/ obj in .1,.3,.4,.7,.9
-            # (0.1, None),
-            # (0.3, None),
-            (0.7, None),
-            (0.9, None),
-            # randomly sample a patch
-            (None, None),
-        )
+    def __init__(self, ratio=(0.5, 1.5), min_win=0.8):
+        self.sample_options = (0.7, None)
+        # (
+        # using entire original input image
+        #     None,
+        #     # sample a patch s.t. MIN jaccard w/ obj in .1,.3,.4,.7,.9
+        #     # (0.1, None),
+        #     # (0.3, None),
+        #     (0.7, None),
+        #     (0.9, None),
+        #     # randomly sample a patch
+        #     (None, None),
+        # )
         self.ratio = ratio
         self.min_win = min_win
 
@@ -148,14 +151,15 @@ class RandomSampleCrop(object):
                 x1 = random.uniform(width - w)
                 rect = np.array([int(y1), int(x1), int(y1 + h), int(x1 + w)])
                 current_img = current_img[rect[0]:rect[2], rect[1]:rect[3], :]
-                current_pts[:, 0] -= rect[1]
-                current_pts[:, 1] -= rect[0]
+                current_pts[:, 0, 0] -= rect[1]
+                current_pts[:, 1, 0] -= rect[0]
                 pts_new = []
                 for pt in current_pts:
-                    if any(pt) < 0 or pt[0] > current_img.shape[1] - 1 or pt[1] > current_img.shape[0] - 1:
-                        continue
-                    else:
-                        pts_new.append(pt)
+                    # print(pt[0,0])
+                    if pt[0, 0] < 0 or pt[1, 0] < 0 or pt[0, 0] > current_img.shape[1] - 1 or pt[1, 0] > \
+                            current_img.shape[0] - 1:
+                        pt[:, 1] = 0
+                    pts_new.append(pt)
 
                 return current_img, np.asarray(pts_new, np.float32)
 
