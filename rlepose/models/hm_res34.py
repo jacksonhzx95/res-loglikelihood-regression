@@ -84,6 +84,7 @@ class HeatmapModel(nn.Module):
         # self.decoder = GHead_no_in(in_channels=self.decoder_feature_channel,
         #                            out_channels=self.num_joints,
         #                            norm_cfg=dict(type='BN', requires_grad=True))
+
         self.hidden_list = cfg['HIDDEN_LIST']
 
         model_state = self.preact.state_dict()
